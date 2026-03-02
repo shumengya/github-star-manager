@@ -95,6 +95,20 @@ type CreateUserListResponse = {
   } | null;
 };
 
+type UpdateUserListResponse = {
+  updateUserList: {
+    list: {
+      id: string;
+      name: string;
+      description?: string | null;
+    } | null;
+  } | null;
+};
+
+type DeleteUserListResponse = {
+  deleteUserList: { clientMutationId: string | null } | null;
+};
+
 type RepositoryMetaResponse = {
   repository: RepositoryMeta | null;
 };
@@ -332,6 +346,50 @@ export async function updateUserListsForItem(
     }
   `;
   await ghGraphql(config, query, { input: { itemId, listIds } });
+}
+
+export async function updateUserListOnGitHub(
+  config: GitHubConfig,
+  listId: string,
+  patch: { name?: string; description?: string; isPrivate?: boolean }
+): Promise<{ id: string; name: string; description: string }> {
+  const input: Record<string, unknown> = { listId };
+  if (patch.name !== undefined) input.name = patch.name;
+  if (patch.description !== undefined) input.description = patch.description;
+  if (patch.isPrivate !== undefined) input.isPrivate = patch.isPrivate;
+
+  const query = `
+    mutation($input: UpdateUserListInput!) {
+      updateUserList(input: $input) {
+        list {
+          id
+          name
+          description
+        }
+      }
+    }
+  `;
+  const data = await ghGraphql<UpdateUserListResponse>(config, query, { input });
+  const list = data.updateUserList?.list;
+  if (!list) {
+    throw new Error("Failed to update list");
+  }
+  return {
+    id: list.id,
+    name: list.name,
+    description: list.description ?? "",
+  };
+}
+
+export async function deleteUserListOnGitHub(config: GitHubConfig, listId: string): Promise<void> {
+  const query = `
+    mutation($input: DeleteUserListInput!) {
+      deleteUserList(input: $input) {
+        clientMutationId
+      }
+    }
+  `;
+  await ghGraphql<DeleteUserListResponse>(config, query, { input: { listId } });
 }
 
 export async function buildRepoMembershipIndex(

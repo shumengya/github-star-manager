@@ -7,9 +7,6 @@ type Preferences = {
   patToken: string;
   viewerLogin: string;
   lastSyncedAt: string;
-  useExistingListsForClassification: boolean;
-  allowNewTagsWithExistingLists: boolean;
-  refreshBeforeApply: boolean;
   uiLanguage: UiLanguagePreference;
 };
 
@@ -21,9 +18,6 @@ const defaultPreferences: Preferences = {
   patToken: "",
   viewerLogin: "",
   lastSyncedAt: "",
-  useExistingListsForClassification: false,
-  allowNewTagsWithExistingLists: true,
-  refreshBeforeApply: true,
   uiLanguage: "auto",
 };
 
@@ -87,18 +81,6 @@ export function usePreferenceStore() {
     persist({ ...cached, lastSyncedAt: timestamp });
   }, []);
 
-  const setUseExistingListsForClassification = useCallback((value: boolean) => {
-    persist({ ...cached, useExistingListsForClassification: value });
-  }, []);
-
-  const setAllowNewTagsWithExistingLists = useCallback((value: boolean) => {
-    persist({ ...cached, allowNewTagsWithExistingLists: value });
-  }, []);
-
-  const setRefreshBeforeApply = useCallback((value: boolean) => {
-    persist({ ...cached, refreshBeforeApply: value });
-  }, []);
-
   const setUiLanguage = useCallback((value: UiLanguagePreference) => {
     persist({ ...cached, uiLanguage: value });
   }, []);
@@ -109,9 +91,6 @@ export function usePreferenceStore() {
     markOnboarded,
     setPatToken,
     setLastSyncedAt,
-    setUseExistingListsForClassification,
-    setAllowNewTagsWithExistingLists,
-    setRefreshBeforeApply,
     setUiLanguage,
   };
 }

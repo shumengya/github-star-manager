@@ -6,10 +6,9 @@ import { db } from "./data/db";
 import { useLiveQuery } from "./data/useLiveQuery";
 import { validatePat } from "./services/githubAuth";
 import { usePreferenceStore } from "./store/preferences";
-import { ApplyUpdatesModal } from "./ui/ApplyUpdatesModal";
 import { AssignListModal } from "./ui/AssignListModal";
 import { FirstRunPrompt } from "./ui/FirstRunPrompt";
-import { LlmClassificationModal } from "./ui/LlmClassificationModal";
+import { ManageListsModal } from "./ui/ManageListsModal";
 import { PatModal } from "./ui/PatModal";
 import { SettingsModal } from "./ui/SettingsModal";
 
@@ -23,16 +22,10 @@ type RepoPreview = {
   updatedAt?: string;
 };
 
-type SyncStatusCode = "idle" | "running" | "completed" | "failed" | "ready" | "retrying";
-
-type SyncMessage = {
-  key: string;
-  values?: Record<string, number | string>;
-};
-
 const previewRepos: RepoPreview[] = [];
 const previewLists: { id: string; name: string; count: number }[] = [
   { id: "all", name: "", count: 0 },
+  { id: "unclassified", name: "", count: 0 },
 ];
 
 export default function App() {
@@ -42,19 +35,10 @@ export default function App() {
   const [activeList, setActiveList] = useState("all");
   const [isPatModalOpen, setIsPatModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isClassificationOpen, setIsClassificationOpen] = useState(false);
-  const [isApplyUpdatesOpen, setIsApplyUpdatesOpen] = useState(false);
+  const [isManageListsOpen, setIsManageListsOpen] = useState(false);
   const [assignRepo, setAssignRepo] = useState<{ id: string; name: string } | null>(null);
-  const [syncStatus, setSyncStatus] = useState<SyncStatusCode>("idle");
-  const [syncMessage, setSyncMessage] = useState<SyncMessage>({
-    key: "app.sync.detail.connectPat",
-  });
-  const [syncError, setSyncError] = useState("");
-  const [syncStage, setSyncStage] = useState("idle");
-  const [syncCurrent, setSyncCurrent] = useState(0);
-  const [syncTotal, setSyncTotal] = useState(0);
-  const [syncFailed, setSyncFailed] = useState(0);
   const [failedListIds, setFailedListIds] = useState<string[]>([]);
+  const [listSidebarOpen, setListSidebarOpen] = useState(false);
   const [languageFilter, setLanguageFilter] = useState("all");
   const [showUnlisted, setShowUnlisted] = useState(false);
   const [recentOnly, setRecentOnly] = useState(false);
@@ -85,6 +69,7 @@ export default function App() {
     async () => {
       const listRows = await db.lists.toArray();
       const repoListRows = await db.repoLists.toArray();
+      const repoListMap = new Map(repoListRows.map((row) => [row.repoId, row.listIds]));
       const countMap = new Map<string, number>();
       for (const row of repoListRows) {
         for (const listId of row.listIds) {
@@ -97,8 +82,18 @@ export default function App() {
         name: list.name,
         count: countMap.get(list.id) ?? 0,
       }));
-      const total = await db.repos.count();
-      return [{ id: "all", name: "", count: total }, ...listCounts];
+      const repoRows = await db.repos.toArray();
+      let unclassifiedCount = 0;
+      for (const repo of repoRows) {
+        const ids = repoListMap.get(repo.id);
+        if (!ids || ids.length === 0) unclassifiedCount += 1;
+      }
+      const total = repoRows.length;
+      return [
+        { id: "all", name: "", count: total },
+        { id: "unclassified", name: "", count: unclassifiedCount },
+        ...listCounts,
+      ];
     },
     [],
     previewLists
@@ -141,10 +136,19 @@ export default function App() {
 
   const visibleRepos = useMemo(() => {
     if (activeList === "all") return repos;
+    if (activeList === "unclassified") return repos.filter((repo) => repo.tags.length === 0);
     const listName = lists.find((list) => list.id === activeList)?.name;
     if (!listName) return [];
     return repos.filter((repo) => repo.tags.includes(listName));
   }, [activeList, repos, lists]);
+
+  const activeListLabel = useMemo(() => {
+    const item = lists.find((l) => l.id === activeList);
+    if (!item) return "";
+    if (item.id === "all") return t("common.values.allStarred");
+    if (item.id === "unclassified") return t("common.values.unclassified");
+    return item.name;
+  }, [lists, activeList, t]);
 
   const filteredRepos = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -164,31 +168,41 @@ export default function App() {
     });
   }, [visibleRepos, languageFilter, showUnlisted, recentOnly, searchQuery]);
 
-  const lastSyncText = useMemo(() => {
-    if (!preferences.lastSyncedAt) return "";
-    const parsed = Date.parse(preferences.lastSyncedAt);
-    if (Number.isNaN(parsed)) return preferences.lastSyncedAt;
-    return new Date(parsed).toLocaleString(i18n.language);
-  }, [preferences.lastSyncedAt, i18n.language]);
-
-  const syncDetail = useMemo(() => {
-    if (syncError) return syncError;
-    if (syncStatus === "running" || syncStatus === "retrying") {
-      const stageText = t(`progress.sync.${syncStage}`, { defaultValue: syncStage });
-      return t("app.sync.detail.progress", {
-        stage: stageText,
-        current: syncCurrent,
-        total: syncTotal,
-      });
-    }
-    return t(syncMessage.key, syncMessage.values);
-  }, [syncError, syncStatus, syncStage, syncCurrent, syncTotal, syncMessage, t]);
-
   useEffect(() => {
     if (activeList === "all") return;
     const exists = lists.some((list) => list.id === activeList);
     if (!exists) setActiveList("all");
   }, [activeList, lists]);
+
+  useEffect(() => {
+    if (!listSidebarOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setListSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [listSidebarOpen]);
+
+  useEffect(() => {
+    if (!listSidebarOpen) return;
+    const mq = window.matchMedia("(max-width: 1100px)");
+    if (!mq.matches) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [listSidebarOpen]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1101px)");
+    const close = () => {
+      if (mq.matches) setListSidebarOpen(false);
+    };
+    mq.addEventListener("change", close);
+    close();
+    return () => mq.removeEventListener("change", close);
+  }, []);
 
   return (
     <div className="app">
@@ -216,69 +230,108 @@ export default function App() {
                 setIsPatModalOpen(true);
                 return;
               }
-              setSyncStatus("running");
-              setSyncError("");
-              setSyncMessage({ key: "app.sync.detail.preparing" });
-              setSyncStage("idle");
-              setSyncCurrent(0);
-              setSyncTotal(0);
-              setSyncFailed(0);
               try {
-                const result = await syncFromGitHub({ token: preferences.patToken }, (progress) => {
-                  setSyncStage(progress.stage);
-                  setSyncCurrent(progress.current);
-                  setSyncTotal(progress.total);
-                  setSyncFailed(progress.failed);
-                });
-                setSyncStatus("completed");
-                setSyncMessage({
-                  key: "app.sync.detail.loaded",
-                  values: { repos: result.repos, lists: result.lists },
-                });
+                const result = await syncFromGitHub({ token: preferences.patToken });
                 setFailedListIds(result.failedListIds);
                 setLastSyncedAt(new Date().toISOString());
-                if (result.failedListIds.length === 0) {
-                  setSyncFailed(0);
-                }
               } catch (error) {
-                setSyncStatus("failed");
-                setSyncError((error as Error).message || t("app.sync.detail.syncFailed"));
+                window.alert((error as Error).message || t("app.sync.detail.syncFailed"));
               }
             }}
           >
             {t("app.actions.syncStarLists")}
           </button>
+          {failedListIds.length > 0 ? (
+            <button
+              className="button"
+              onClick={async () => {
+                if (!preferences.patToken) return;
+                try {
+                  const result = await retryListMembership(
+                    { token: preferences.patToken },
+                    failedListIds
+                  );
+                  setFailedListIds(result.failedListIds);
+                } catch (error) {
+                  window.alert((error as Error).message || t("app.sync.detail.retryFailed"));
+                }
+              }}
+            >
+              {t("app.actions.retryFailedLists", { count: failedListIds.length })}
+            </button>
+          ) : null}
         </div>
       </header>
 
       <main className="app-main">
-        <section className="panel">
-          <h2>{t("app.sections.starLists")}</h2>
-          {lists.length === 1 && lists[0].id === "all" ? (
-            <div className="empty-state">
-              <p>{t("app.empty.noListsTitle")}</p>
-              <p>{t("app.empty.noListsHint")}</p>
+        {listSidebarOpen ? (
+          <div
+            className="list-sidebar-backdrop"
+            aria-hidden
+            onClick={() => setListSidebarOpen(false)}
+          />
+        ) : null}
+        <section className={`panel panel--star-lists ${listSidebarOpen ? "is-open" : ""}`}>
+          <div className="panel-heading panel-heading--list-sidebar">
+            <button
+              type="button"
+              className="list-sidebar-close-btn"
+              onClick={() => setListSidebarOpen(false)}
+              aria-label={t("app.nav.closeListSidebar")}
+            >
+              ✕
+            </button>
+            <h2>{t("app.sections.starLists")}</h2>
+            <button type="button" className="button" onClick={() => setIsManageListsOpen(true)}>
+              {t("app.actions.manageLists")}
+            </button>
+          </div>
+          {lists.filter((l) => l.id !== "all" && l.id !== "unclassified").length === 0 ? (
+            <p className="helper-text list-panel-hint">{t("app.empty.noListsHint")}</p>
+          ) : null}
+          {lists.map((list) => (
+            <div
+              key={list.id}
+              className={`list-item ${activeList === list.id ? "active" : ""}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                setActiveList(list.id);
+                setListSidebarOpen(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  setActiveList(list.id);
+                  setListSidebarOpen(false);
+                }
+              }}
+            >
+              <span>
+                {list.id === "all"
+                  ? t("common.values.allStarred")
+                  : list.id === "unclassified"
+                    ? t("common.values.unclassified")
+                    : list.name}
+              </span>
+              <span>{list.count}</span>
             </div>
-          ) : (
-            lists.map((list) => (
-              <div
-                key={list.id}
-                className={`list-item ${activeList === list.id ? "active" : ""}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setActiveList(list.id)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") setActiveList(list.id);
-                }}
-              >
-                <span>{list.id === "all" ? t("common.values.allStarred") : list.name}</span>
-                <span>{list.count}</span>
-              </div>
-            ))
-          )}
+          ))}
         </section>
 
-        <section className="panel">
+        <section className="panel panel--repos">
+          <div className="repo-panel-toolbar">
+            <button
+              type="button"
+              className="button list-sidebar-open-btn"
+              onClick={() => setListSidebarOpen(true)}
+            >
+              <span className="list-sidebar-open-icon" aria-hidden>
+                ☰
+              </span>
+              <span className="list-sidebar-open-text">{t("app.nav.openStarLists")}</span>
+              <span className="list-sidebar-active-chip">{activeListLabel}</span>
+            </button>
+          </div>
           <h2>{t("app.sections.repositories")}</h2>
           {repos.length === 0 ? (
             <div className="empty-state">
@@ -340,7 +393,7 @@ export default function App() {
                 <article key={repo.id} className="repo-card">
                   <h3 className="repo-title">{repo.name}</h3>
                   <p className="repo-desc">{repo.description || t("app.values.noDescription")}</p>
-                  <div>
+                  <div className="repo-tags">
                     {repo.tags.map((tag) => (
                       <span className="tag" key={tag}>
                         {tag}
@@ -361,83 +414,6 @@ export default function App() {
               ))}
             </div>
           )}
-        </section>
-
-        <section className="sidebar-meta">
-          <div className="meta-card">
-            <h3 className="meta-title">{t("app.sections.syncStatus")}</h3>
-            <p className="meta-desc">
-              {t("common.labels.status")}: {t(`app.sync.status.${syncStatus}`, { defaultValue: syncStatus })}
-            </p>
-            <p className="meta-desc">{syncDetail}</p>
-            <p className="meta-desc">
-              {t("common.labels.stage")}: {t(`progress.sync.${syncStage}`, { defaultValue: syncStage })}
-            </p>
-            <p className="meta-desc">
-              {t("common.labels.progress")}: {syncCurrent}/{syncTotal} · {t("common.labels.failed")}: {syncFailed}
-            </p>
-            {preferences.lastSyncedAt ? (
-              <p className="meta-desc">
-                {t("common.labels.lastSync")}: {lastSyncText}
-              </p>
-            ) : null}
-            {failedListIds.length > 0 ? (
-              <button
-                className="button"
-                onClick={async () => {
-                  if (!preferences.patToken) return;
-                  setSyncStatus("retrying");
-                  setSyncError("");
-                  try {
-                    const result = await retryListMembership(
-                      { token: preferences.patToken },
-                      failedListIds,
-                      (progress) => {
-                        setSyncStage(progress.stage);
-                        setSyncCurrent(progress.current);
-                        setSyncTotal(progress.total);
-                        setSyncFailed(progress.failed);
-                      }
-                    );
-                    setFailedListIds(result.failedListIds);
-                    setSyncStatus("completed");
-                    setSyncMessage({
-                      key:
-                        result.failedListIds.length === 0
-                          ? "app.sync.detail.retryRecovered"
-                          : "app.sync.detail.retryFinished",
-                      values:
-                        result.failedListIds.length === 0
-                          ? undefined
-                          : { count: result.failedListIds.length },
-                    });
-                  } catch (error) {
-                    setSyncStatus("failed");
-                    setSyncError((error as Error).message || t("app.sync.detail.retryFailed"));
-                  }
-                }}
-              >
-                {t("app.actions.retryFailedLists", { count: failedListIds.length })}
-              </button>
-            ) : null}
-          </div>
-          <div className="meta-card">
-            <h3 className="meta-title">{t("app.sections.llmClassification")}</h3>
-            <p className="meta-desc">{t("app.sidebar.llmDesc")}</p>
-            <button className="button" onClick={() => setIsSettingsOpen(true)}>
-              {t("app.actions.configureLlm")}
-            </button>
-            <button className="button" onClick={() => setIsClassificationOpen(true)}>
-              {t("app.actions.runClassification")}
-            </button>
-          </div>
-          <div className="meta-card">
-            <h3 className="meta-title">{t("app.sections.batchActions")}</h3>
-            <p className="meta-desc">{t("app.sidebar.batchDesc")}</p>
-            <button className="button primary" onClick={() => setIsApplyUpdatesOpen(true)}>
-              {t("app.actions.applyUpdates")}
-            </button>
-          </div>
         </section>
       </main>
 
@@ -460,25 +436,17 @@ export default function App() {
           try {
             const viewer = await validatePat(token);
             setPatToken(token, viewer.login);
-            setSyncStatus("ready");
-            setSyncError("");
-            setSyncMessage({ key: "app.sync.detail.tokenOk", values: { login: viewer.login } });
             setIsPatModalOpen(false);
           } catch (error) {
-            setSyncStatus("failed");
-            setSyncError((error as Error).message || t("app.sync.detail.tokenValidationFailed"));
+            window.alert((error as Error).message || t("app.sync.detail.tokenValidationFailed"));
           }
         }}
       />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <LlmClassificationModal
-        isOpen={isClassificationOpen}
-        onClose={() => setIsClassificationOpen(false)}
-      />
-      <ApplyUpdatesModal
-        isOpen={isApplyUpdatesOpen}
-        onClose={() => setIsApplyUpdatesOpen(false)}
-        token={preferences.patToken}
+      <ManageListsModal
+        isOpen={isManageListsOpen}
+        onClose={() => setIsManageListsOpen(false)}
+        patToken={preferences.patToken}
         onRequestToken={() => setIsPatModalOpen(true)}
       />
       {assignRepo ? (
@@ -486,7 +454,9 @@ export default function App() {
           isOpen={Boolean(assignRepo)}
           repoId={assignRepo.id}
           repoName={assignRepo.name}
+          patToken={preferences.patToken}
           onClose={() => setAssignRepo(null)}
+          onRequestToken={() => setIsPatModalOpen(true)}
         />
       ) : null}
     </div>

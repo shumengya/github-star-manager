@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { setRepoListMembership } from "../core/repoListAssignments";
+import { syncRepoListAssignmentToGitHub } from "../core/syncRepoListToGitHub";
 import { db } from "../data/db";
 import { useLiveQuery } from "../data/useLiveQuery";
 
@@ -8,10 +9,19 @@ type AssignListModalProps = {
   isOpen: boolean;
   repoId: string;
   repoName: string;
+  patToken: string;
   onClose: () => void;
+  onRequestToken?: () => void;
 };
 
-export function AssignListModal({ isOpen, repoId, repoName, onClose }: AssignListModalProps) {
+export function AssignListModal({
+  isOpen,
+  repoId,
+  repoName,
+  patToken,
+  onClose,
+  onRequestToken,
+}: AssignListModalProps) {
   const { t } = useTranslation();
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -48,15 +58,21 @@ export function AssignListModal({ isOpen, repoId, repoName, onClose }: AssignLis
   };
 
   const handleSave = async () => {
+    if (!patToken.trim()) {
+      setStatus(t("assignList.status.needPat"));
+      onRequestToken?.();
+      return;
+    }
     setIsSaving(true);
     setStatus("");
     try {
+      await syncRepoListAssignmentToGitHub({ token: patToken }, repoId, selectedListIds);
       await setRepoListMembership(repoId, selectedListIds);
-      setStatus(t("assignList.status.saved"));
-    } catch (error) {
-      setStatus((error as Error).message || t("assignList.status.saveFailed"));
-    } finally {
       setIsSaving(false);
+      onClose();
+    } catch (error) {
+      setIsSaving(false);
+      setStatus((error as Error).message || t("assignList.status.saveFailed"));
     }
   };
 

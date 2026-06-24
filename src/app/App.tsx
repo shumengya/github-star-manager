@@ -208,7 +208,9 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="brand">
-          <div className="brand-icon">★</div>
+          <div className="brand-logo">
+            <img src="/logo.png" alt="" width={40} height={40} decoding="async" />
+          </div>
           <div>
             <h1 className="brand-title">{t("common.appName")}</h1>
             <p className="brand-subtitle">{t("app.subtitle")}</p>

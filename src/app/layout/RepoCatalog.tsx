@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import controls from "../styles/controls.module.css";
 import type { RepoPreview } from "../types/repo";
 import styles from "./RepoCatalog.module.css";
+import { BrandMark } from "../ui/BrandMark";
 import { RepoRow } from "./RepoRow";
 
 type RepoCatalogProps = {
@@ -40,7 +41,7 @@ export function RepoCatalog({
   const { t } = useTranslation();
 
   return (
-    <section className={styles.catalog}>
+    <section className={`${styles.catalog} scroll`}>
       <div className={styles.toolbar}>
         <button type="button" className={`${controls.button} ${styles.openRail}`} onClick={onOpenRail}>
           <span aria-hidden>☰</span>
@@ -51,7 +52,7 @@ export function RepoCatalog({
       <h2 className={styles.heading}>{t("app.sections.repositories")}</h2>
       {repos.length === 0 ? (
         <div className={styles.empty}>
-          <img src="/favicon.svg" alt="" width={48} height={48} />
+          <BrandMark size={48} />
           <p>{t("app.empty.noDataTitle")}</p>
           <p className={styles.hint}>{t("app.empty.noDataHint")}</p>
         </div>

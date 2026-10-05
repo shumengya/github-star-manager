@@ -52,7 +52,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   return (
     <div className={dialog.overlay} role="dialog" aria-modal="true">
-      <div className={dialog.panel}>
+      <div className={`${dialog.panel} scroll`}>
         <button className={dialog.close} onClick={onClose} aria-label={t("settings.closeAria")}>
           ✕
         </button>

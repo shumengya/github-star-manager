@@ -16,7 +16,7 @@ export function PatRequiredPrompt({ onEnterToken, onLater }: PatRequiredPromptPr
 
   return (
     <div className={dialog.overlay} role="dialog" aria-modal="true" aria-labelledby="pat-required-title">
-      <div className={dialog.panel}>
+      <div className={`${dialog.panel} scroll`}>
         <h3 id="pat-required-title">{t("patRequired.title")}</h3>
         <p>{t("patRequired.intro")}</p>
         <p>{t("patRequired.classicHint")}</p>

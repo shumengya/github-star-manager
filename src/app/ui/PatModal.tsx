@@ -17,7 +17,7 @@ export function PatModal({ isOpen, onClose, onSave }: PatModalProps) {
 
   return (
     <div className={dialog.overlay} role="dialog" aria-modal="true">
-      <div className={dialog.panel}>
+      <div className={`${dialog.panel} scroll`}>
         <h3>{t("patModal.title")}</h3>
         <p>{t("patModal.description")}</p>
         <div className={controls.field}>

@@ -17,6 +17,7 @@
   position: relative;
   max-height: 85vh;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .panel h3 {

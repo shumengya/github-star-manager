@@ -12,6 +12,7 @@ import controls from "./styles/controls.module.css";
 import shell from "./layout/AppShell.module.css";
 import { formatIsoDate, type ListPreview, type RepoPreview } from "./types/repo";
 import { AssignListModal } from "./ui/AssignListModal";
+import { BrandMark } from "./ui/BrandMark";
 import { FirstRunPrompt } from "./ui/FirstRunPrompt";
 import { ManageListsModal } from "./ui/ManageListsModal";
 import { PatModal } from "./ui/PatModal";
@@ -264,7 +265,7 @@ export default function App() {
       <header className={shell.header}>
         <div className={shell.brand}>
           <div className={shell.logo}>
-            <img src="/favicon.svg" alt="" width={40} height={40} decoding="async" />
+            <BrandMark size={40} />
           </div>
           <div>
             <h1 className={shell.title}>{t("common.appName")}</h1>

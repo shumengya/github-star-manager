@@ -12,7 +12,7 @@ export function FirstRunPrompt({ onConfirm, onSkip }: FirstRunPromptProps) {
 
   return (
     <div className={dialog.overlay} role="dialog" aria-modal="true">
-      <div className={dialog.panel}>
+      <div className={`${dialog.panel} scroll`}>
         <h3>{t("onboarding.title")}</h3>
         <p>{t("onboarding.description1")}</p>
         <p>{t("onboarding.description2")}</p>

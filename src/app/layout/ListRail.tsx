@@ -17,7 +17,7 @@ export function ListRail({ lists, activeList, open, onSelect, onClose, onManage 
   const hasCustom = lists.some((list) => list.id !== "all" && list.id !== "unclassified");
 
   return (
-    <section className={`${styles.rail} ${open ? styles.open : ""}`}>
+    <section className={`${styles.rail} ${open ? styles.open : ""} scroll`}>
       <div className={styles.head}>
         <button type="button" className={styles.close} onClick={onClose} aria-label={t("app.nav.closeListSidebar")}>
           ✕

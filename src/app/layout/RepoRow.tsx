@@ -14,7 +14,15 @@ export function RepoRow({ repo, onAssign }: RepoRowProps) {
   return (
     <article className={styles.row}>
       {repo.ownerAvatarUrl ? (
-        <img className={styles.avatar} src={repo.ownerAvatarUrl} alt="" width={28} height={28} decoding="async" />
+        <img
+          className={styles.avatar}
+          src={repo.ownerAvatarUrl}
+          alt=""
+          width={32}
+          height={32}
+          decoding="async"
+          referrerPolicy="no-referrer"
+        />
       ) : (
         <span />
       )}

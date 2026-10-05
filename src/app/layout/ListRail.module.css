@@ -4,6 +4,7 @@
   min-height: 0;
   height: 100%;
   overflow: auto;
+  scrollbar-gutter: stable;
   padding: 18px 0 28px;
 }
 

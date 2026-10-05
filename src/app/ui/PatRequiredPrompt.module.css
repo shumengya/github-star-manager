@@ -1,0 +1,33 @@
+.list {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  font-size: 0.875rem;
+}
+
+.list code {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--orbit-soft);
+  color: var(--orbit);
+  font-size: 0.8125rem;
+  border-radius: var(--radius-sm);
+}
+
+.note {
+  color: var(--steel);
+  font-size: 0.8125rem;
+}
+
+.link {
+  color: var(--orbit);
+}

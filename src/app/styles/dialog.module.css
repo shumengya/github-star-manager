@@ -1,0 +1,61 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(50, 44, 40, 0.28);
+  display: grid;
+  place-items: center;
+  z-index: 40;
+  padding: 16px;
+}
+
+.panel {
+  width: min(560px, 92vw);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 28px;
+  position: relative;
+  max-height: 85vh;
+  overflow: auto;
+}
+
+.panel h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.panel h4 {
+  margin: 0 0 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.panel p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.panel p + p {
+  margin-top: 8px;
+}
+
+.close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--steel);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 4px;
+}
+
+.section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}

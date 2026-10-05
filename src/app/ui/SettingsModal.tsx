@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { type UiLanguagePreference } from "../i18n/language";
 import { validatePat } from "../services/githubAuth";
 import { usePreferenceStore } from "../store/preferences";
+import dialog from "../styles/dialog.module.css";
+import controls from "../styles/controls.module.css";
 
 type SettingsModalProps = {
   isOpen: boolean;
@@ -49,88 +51,88 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   };
 
   return (
-    <div className="drawer" role="dialog" aria-modal="true">
-      <div className="drawer-panel settings">
-        <button className="panel-close" onClick={onClose} aria-label={t("settings.closeAria")}>
+    <div className={dialog.overlay} role="dialog" aria-modal="true">
+      <div className={dialog.panel}>
+        <button className={dialog.close} onClick={onClose} aria-label={t("settings.closeAria")}>
           ✕
         </button>
-        <div className="settings-scroll">
-          <h3>{t("settings.title")}</h3>
-          <p>{t("settings.description")}</p>
+        <h3>{t("settings.title")}</h3>
+        <p>{t("settings.description")}</p>
 
-          <div className="settings-section">
-            <h4>{t("settings.sections.language")}</h4>
-            <div className="input-row">
-              <label htmlFor="ui-language-select">{t("settings.language.appLanguage")}</label>
-              <select
-                id="ui-language-select"
-                value={preferences.uiLanguage}
-                onChange={(event) => setUiLanguage(event.target.value as UiLanguagePreference)}
-              >
-                <option value="auto">{t("settings.language.auto")}</option>
-                <option value="en">{t("settings.language.english")}</option>
-                <option value="zh-CN">{t("settings.language.chineseSimplified")}</option>
-              </select>
-            </div>
+        <div className={dialog.section}>
+          <h4>{t("settings.sections.language")}</h4>
+          <div className={controls.field}>
+            <label htmlFor="ui-language-select">{t("settings.language.appLanguage")}</label>
+            <select
+              id="ui-language-select"
+              value={preferences.uiLanguage}
+              onChange={(event) => setUiLanguage(event.target.value as UiLanguagePreference)}
+            >
+              <option value="auto">{t("settings.language.auto")}</option>
+              <option value="en">{t("settings.language.english")}</option>
+              <option value="zh-CN">{t("settings.language.chineseSimplified")}</option>
+            </select>
           </div>
+        </div>
 
-          <div className="settings-section">
-            <h4>{t("settings.sections.patManagement")}</h4>
-            <div className="input-row">
-              <label htmlFor="pat-token">{t("settings.pat.githubPat")}</label>
-              <input
-                id="pat-token"
-                type="password"
-                value={patTokenInput}
-                onChange={(event) => setPatTokenInput(event.target.value)}
-                placeholder="ghp_..."
-              />
-            </div>
-            <div className="input-row">
-              <label htmlFor="pat-login">{t("settings.pat.githubLoginOptional")}</label>
-              <input
-                id="pat-login"
-                type="text"
-                value={patLoginInput}
-                onChange={(event) => setPatLoginInput(event.target.value)}
-                placeholder="octocat"
-              />
-            </div>
-            <div className="settings-actions">
-              <button className="button" onClick={handleSavePat} disabled={isSavingPat}>
-                {isSavingPat ? t("settings.pat.validating") : t("settings.pat.savePat")}
-              </button>
-              <button
-                className="button"
-                onClick={() => {
-                  setPatToken("", "");
-                  setPatTokenInput("");
-                  setPatLoginInput("");
-                  setStatus(t("settings.pat.cleared"));
-                }}
-              >
-                {t("settings.pat.clearPat")}
-              </button>
-            </div>
+        <div className={dialog.section}>
+          <h4>{t("settings.sections.patManagement")}</h4>
+          <div className={controls.field}>
+            <label htmlFor="pat-token">{t("settings.pat.githubPat")}</label>
+            <input
+              id="pat-token"
+              type="password"
+              value={patTokenInput}
+              onChange={(event) => setPatTokenInput(event.target.value)}
+              placeholder="ghp_..."
+            />
           </div>
-
-          <div className="settings-section">
-            <h4>{t("settings.sections.readmeFetching")}</h4>
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={preferences.readmeOptIn}
-                onChange={(event) => setReadmeOptIn(event.target.checked)}
-              />
-              {t("settings.readme.enable")}
-            </label>
+          <div className={controls.field}>
+            <label htmlFor="pat-login">{t("settings.pat.githubLoginOptional")}</label>
+            <input
+              id="pat-login"
+              type="text"
+              value={patLoginInput}
+              onChange={(event) => setPatLoginInput(event.target.value)}
+              placeholder="octocat"
+            />
           </div>
-
-          <div className="settings-section">
-            <h4>{t("settings.sections.localCache")}</h4>
-            <p className="helper-text">{t("settings.cache.help")}</p>
+          <div className={controls.actions}>
+            <button className={controls.button} onClick={handleSavePat} disabled={isSavingPat}>
+              {isSavingPat ? t("settings.pat.validating") : t("settings.pat.savePat")}
+            </button>
             <button
-              className="button"
+              className={controls.button}
+              onClick={() => {
+                setPatToken("", "");
+                setPatTokenInput("");
+                setPatLoginInput("");
+                setStatus(t("settings.pat.cleared"));
+              }}
+            >
+              {t("settings.pat.clearPat")}
+            </button>
+          </div>
+        </div>
+
+        <div className={dialog.section}>
+          <h4>{t("settings.sections.readmeFetching")}</h4>
+          <label className={controls.check}>
+            <input
+              type="checkbox"
+              checked={preferences.readmeOptIn}
+              onChange={(event) => setReadmeOptIn(event.target.checked)}
+            />
+            {t("settings.readme.enable")}
+          </label>
+        </div>
+
+        <div className={dialog.section}>
+          <h4>{t("settings.sections.localCache")}</h4>
+          <p className={controls.muted}>{t("settings.cache.help")}</p>
+          <div className={controls.actions}>
+            <button
+              className={controls.button}
               onClick={() => {
                 indexedDB.deleteDatabase("star-manager");
                 setStatus(t("settings.cache.cleared"));
@@ -140,9 +142,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               {t("settings.cache.clearButton")}
             </button>
           </div>
-
-          {status ? <p className="helper-text">{status}</p> : null}
         </div>
+
+        {status ? <p className={controls.muted}>{status}</p> : null}
       </div>
     </div>
   );

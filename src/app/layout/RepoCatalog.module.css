@@ -1,0 +1,99 @@
+.catalog {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px 28px 40px;
+}
+
+.toolbar {
+  display: none;
+}
+
+.openRail {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.current {
+  color: var(--steel);
+}
+
+.heading {
+  margin: 0 0 12px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.group label {
+  font-size: 0.75rem;
+  color: var(--steel);
+}
+
+.group input,
+.group select {
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  min-width: 160px;
+  color: var(--ink);
+}
+
+.search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 36px 4px;
+}
+
+.empty img {
+  width: 48px;
+  height: 48px;
+}
+
+.empty p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.hint {
+  color: var(--steel);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--rule);
+}
+
+@media (max-width: 1100px) {
+  .catalog {
+    padding: 14px 16px 28px;
+  }
+
+  .toolbar {
+    display: block;
+    margin-bottom: 12px;
+  }
+}

@@ -14,8 +14,25 @@ export type StarredRepo = {
   url: string;
   topics: string[];
   language: string | null;
+  languageColor: string | null;
   updatedAt: string;
+  pushedAt: string | null;
+  createdAt: string | null;
+  starredAt: string | null;
   stargazerCount: number;
+  forkCount: number;
+  openIssuesCount: number;
+  watcherCount: number;
+  isArchived: boolean;
+  isFork: boolean;
+  isTemplate: boolean;
+  isPrivate: boolean;
+  license: string | null;
+  homepageUrl: string | null;
+  ownerLogin: string;
+  ownerAvatarUrl: string;
+  parentFullName: string | null;
+  defaultBranch: string | null;
 };
 
 export type StarListMembership = {
@@ -65,16 +82,30 @@ type StarredRepoNode = {
   nameWithOwner: string;
   description: string | null;
   url: string;
-  repositoryTopics: { nodes: { topic: { name: string } }[] };
-  primaryLanguage: { name: string } | null;
+  homepageUrl: string | null;
+  createdAt: string;
   updatedAt: string;
+  pushedAt: string | null;
   stargazerCount: number;
+  forkCount: number;
+  isArchived: boolean;
+  isFork: boolean;
+  isTemplate: boolean;
+  isPrivate: boolean;
+  owner: { login: string; avatarUrl: string };
+  primaryLanguage: { name: string; color: string | null } | null;
+  licenseInfo: { spdxId: string | null; name: string } | null;
+  parent: { nameWithOwner: string } | null;
+  defaultBranchRef: { name: string } | null;
+  repositoryTopics: { nodes: { topic: { name: string } }[] };
+  openIssues: { totalCount: number };
+  watchers: { totalCount: number };
 };
 
 type FetchStarredReposResponse = {
   viewer: {
     starredRepositories: {
-      nodes: StarredRepoNode[];
+      edges: { starredAt: string; node: StarredRepoNode }[];
       pageInfo: GraphqlPageInfo;
     };
   };
@@ -174,18 +205,35 @@ export async function fetchStarredRepos(config: GitHubConfig): Promise<StarredRe
       query ($first: Int!, $after: String) {
         viewer {
           starredRepositories(first: $first, after: $after, orderBy: { field: STARRED_AT, direction: DESC }) {
-            nodes {
-              id
-              name
-              nameWithOwner
-              description
-              url
-              repositoryTopics(first: 10) {
-                nodes { topic { name } }
+            edges {
+              starredAt
+              node {
+                id
+                name
+                nameWithOwner
+                description
+                url
+                homepageUrl
+                createdAt
+                updatedAt
+                pushedAt
+                stargazerCount
+                forkCount
+                isArchived
+                isFork
+                isTemplate
+                isPrivate
+                owner { login avatarUrl }
+                primaryLanguage { name color }
+                licenseInfo { spdxId name }
+                parent { nameWithOwner }
+                defaultBranchRef { name }
+                repositoryTopics(first: 20) {
+                  nodes { topic { name } }
+                }
+                openIssues: issues(states: OPEN) { totalCount }
+                watchers { totalCount }
               }
-              primaryLanguage { name }
-              updatedAt
-              stargazerCount
             }
             pageInfo { hasNextPage endCursor }
           }
@@ -198,19 +246,39 @@ export async function fetchStarredRepos(config: GitHubConfig): Promise<StarredRe
     const connection: FetchStarredReposResponse["viewer"]["starredRepositories"] =
       data.viewer.starredRepositories;
     repos.push(
-      ...connection.nodes.map((node: StarredRepoNode) => ({
-        id: node.id,
-        name: node.name,
-        fullName: node.nameWithOwner,
-        description: node.description,
-        url: node.url,
-        topics: node.repositoryTopics.nodes.map(
-          (topicNode: { topic: { name: string } }) => topicNode.topic.name
-        ),
-        language: node.primaryLanguage?.name ?? null,
-        updatedAt: node.updatedAt,
-        stargazerCount: node.stargazerCount,
-      }))
+      ...connection.edges.map((edge) => {
+        const node = edge.node;
+        return {
+          id: node.id,
+          name: node.name,
+          fullName: node.nameWithOwner,
+          description: node.description,
+          url: node.url,
+          topics: (node.repositoryTopics.nodes ?? []).map(
+            (topicNode: { topic: { name: string } }) => topicNode.topic.name
+          ),
+          language: node.primaryLanguage?.name ?? null,
+          languageColor: node.primaryLanguage?.color ?? null,
+          updatedAt: node.updatedAt,
+          pushedAt: node.pushedAt,
+          createdAt: node.createdAt,
+          starredAt: edge.starredAt,
+          stargazerCount: node.stargazerCount,
+          forkCount: node.forkCount,
+          openIssuesCount: node.openIssues?.totalCount ?? 0,
+          watcherCount: node.watchers?.totalCount ?? 0,
+          isArchived: node.isArchived,
+          isFork: node.isFork,
+          isTemplate: node.isTemplate,
+          isPrivate: node.isPrivate,
+          license: node.licenseInfo?.spdxId || node.licenseInfo?.name || null,
+          homepageUrl: node.homepageUrl,
+          ownerLogin: node.owner.login,
+          ownerAvatarUrl: node.owner.avatarUrl,
+          parentFullName: node.parent?.nameWithOwner ?? null,
+          defaultBranch: node.defaultBranchRef?.name ?? null,
+        };
+      })
     );
 
     if (!connection.pageInfo.hasNextPage) break;

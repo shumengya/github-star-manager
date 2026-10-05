@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Cloudflare / wrangler build artifacts
+.cloudflare
+.wrangler
+
+# Cursor editor
+.cursor
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

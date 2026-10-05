@@ -1,0 +1,81 @@
+.button {
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--lamp);
+  border-color: #d8c9b8;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.primary {
+  background: var(--orbit);
+  color: #fff;
+  border-color: var(--orbit);
+}
+
+.primary:hover:not(:disabled) {
+  background: #4a6c98;
+  border-color: #4a6c98;
+  filter: none;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field label {
+  font-size: 0.75rem;
+  color: var(--steel);
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  font-size: 0.8125rem;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+.muted {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--steel);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}

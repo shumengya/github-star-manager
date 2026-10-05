@@ -1,0 +1,43 @@
+.table {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.head,
+.row {
+  display: grid;
+  grid-template-columns: 1fr 72px minmax(140px, auto);
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 0.8125rem;
+}
+
+.head {
+  background: var(--paper);
+  color: var(--steel);
+}
+
+.row {
+  border-top: 1px solid var(--rule);
+  align-items: center;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}

@@ -7,9 +7,26 @@ export type RepoRecord = {
   repoUrl: string;
   topics: string[];
   language: string | null;
+  languageColor: string | null;
   updatedAt: string;
+  pushedAt: string | null;
+  createdAt: string | null;
+  starredAt: string | null;
   readmeExcerpt: string;
   stargazerCount: number;
+  forkCount: number;
+  openIssuesCount: number;
+  watcherCount: number;
+  isArchived: boolean;
+  isFork: boolean;
+  isTemplate: boolean;
+  isPrivate: boolean;
+  license: string | null;
+  homepageUrl: string | null;
+  ownerLogin: string;
+  ownerAvatarUrl: string;
+  parentFullName: string | null;
+  defaultBranch: string | null;
 };
 
 export type ClassificationRecord = {
@@ -94,6 +111,17 @@ export class StarManagerDB extends Dexie {
     });
     this.version(2).stores({
       repos: "id, fullName",
+      lists: "id, name",
+      repoLists: "repoId",
+      classifications: "repoId",
+      classificationRuns: "id, createdAt",
+      classificationTags: "id, runId, repoId",
+      tagCompression: "tag",
+      jobs: "id, type, status",
+      cache: "key",
+    });
+    this.version(3).stores({
+      repos: "id, fullName, language, pushedAt, starredAt, isArchived",
       lists: "id, name",
       repoLists: "repoId",
       classifications: "repoId",

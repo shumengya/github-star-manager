@@ -1,29 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { detectBrowserLanguage, resolveEffectiveLanguage } from "./i18n/language";
-import { retryListMembership, syncFromGitHub } from "./core/githubSync";
+import { isLastSyncStale, retryListMembership, syncFromGitHub } from "./core/githubSync";
 import { db } from "./data/db";
 import { useLiveQuery } from "./data/useLiveQuery";
+import { ListRail } from "./layout/ListRail";
+import { RepoCatalog } from "./layout/RepoCatalog";
 import { validatePat } from "./services/githubAuth";
-import { usePreferenceStore } from "./store/preferences";
+import { getPreferenceSnapshot, usePreferenceStore } from "./store/preferences";
+import controls from "./styles/controls.module.css";
+import shell from "./layout/AppShell.module.css";
+import { formatIsoDate, type ListPreview, type RepoPreview } from "./types/repo";
 import { AssignListModal } from "./ui/AssignListModal";
 import { FirstRunPrompt } from "./ui/FirstRunPrompt";
 import { ManageListsModal } from "./ui/ManageListsModal";
 import { PatModal } from "./ui/PatModal";
+import { PatRequiredPrompt } from "./ui/PatRequiredPrompt";
 import { SettingsModal } from "./ui/SettingsModal";
 
-type RepoPreview = {
-  id: string;
-  name: string;
-  description: string;
-  tags: string[];
-  language?: string | null;
-  stars?: number;
-  updatedAt?: string;
-};
-
 const previewRepos: RepoPreview[] = [];
-const previewLists: { id: string; name: string; count: number }[] = [
+const previewLists: ListPreview[] = [
   { id: "all", name: "", count: 0 },
   { id: "unclassified", name: "", count: 0 },
 ];
@@ -34,6 +30,7 @@ export default function App() {
     usePreferenceStore();
   const [activeList, setActiveList] = useState("all");
   const [isPatModalOpen, setIsPatModalOpen] = useState(false);
+  const [patIntroDismissed, setPatIntroDismissed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isManageListsOpen, setIsManageListsOpen] = useState(false);
   const [assignRepo, setAssignRepo] = useState<{ id: string; name: string } | null>(null);
@@ -43,6 +40,9 @@ export default function App() {
   const [showUnlisted, setShowUnlisted] = useState(false);
   const [recentOnly, setRecentOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const syncLock = useRef(false);
+  const autoStaleSyncStarted = useRef(false);
 
   const browserLanguage = useMemo(() => detectBrowserLanguage(), []);
   const effectiveLanguage = useMemo(
@@ -55,15 +55,55 @@ export default function App() {
     document.documentElement.lang = effectiveLanguage;
   }, [i18n, effectiveLanguage]);
 
+  const runSync = useCallback(async (): Promise<boolean> => {
+    const token = getPreferenceSnapshot().patToken.trim();
+    if (!token) {
+      setIsPatModalOpen(true);
+      return false;
+    }
+    if (syncLock.current) return false;
+    syncLock.current = true;
+    setIsSyncing(true);
+    try {
+      const result = await syncFromGitHub({ token });
+      setFailedListIds(result.failedListIds);
+      setLastSyncedAt(new Date().toISOString());
+      return true;
+    } catch (error) {
+      window.alert((error as Error).message || t("app.sync.detail.syncFailed"));
+      return false;
+    } finally {
+      syncLock.current = false;
+      setIsSyncing(false);
+    }
+  }, [setLastSyncedAt, t]);
+
   useEffect(() => {
-    if (!preferences.hasCompletedOnboarding) {
+    const onInteract = () => {
+      const { patToken, lastSyncedAt } = getPreferenceSnapshot();
+      if (!patToken.trim() || !isLastSyncStale(lastSyncedAt)) return;
+      if (autoStaleSyncStarted.current || syncLock.current) return;
+      autoStaleSyncStarted.current = true;
+      void runSync().then((ok) => {
+        if (!ok) autoStaleSyncStarted.current = false;
+      });
+    };
+    window.addEventListener("pointerdown", onInteract);
+    return () => window.removeEventListener("pointerdown", onInteract);
+  }, [runSync]);
+
+  const showPatRequiredPrompt =
+    !preferences.patToken.trim() && !patIntroDismissed && !isPatModalOpen;
+
+  useEffect(() => {
+    if (showPatRequiredPrompt || !preferences.hasCompletedOnboarding) {
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = "";
       };
     }
     return undefined;
-  }, [preferences.hasCompletedOnboarding]);
+  }, [showPatRequiredPrompt, preferences.hasCompletedOnboarding]);
 
   const lists = useLiveQuery(
     async () => {
@@ -117,9 +157,23 @@ export default function App() {
           .map((listId) => listMap.get(listId))
           .filter((name): name is string => Boolean(name))
           .slice(0, 4),
+        topics: repo.topics ?? [],
         language: repo.language,
+        languageColor: repo.languageColor,
         stars: repo.stargazerCount,
+        forks: repo.forkCount,
+        openIssues: repo.openIssuesCount,
+        license: repo.license,
+        homepageUrl: repo.homepageUrl,
+        repoUrl: repo.repoUrl,
+        ownerAvatarUrl: repo.ownerAvatarUrl,
+        parentFullName: repo.parentFullName,
+        isArchived: repo.isArchived,
+        isFork: repo.isFork,
+        isTemplate: repo.isTemplate,
         updatedAt: repo.updatedAt,
+        pushedAt: repo.pushedAt,
+        starredAt: repo.starredAt,
       }));
     },
     [],
@@ -155,14 +209,15 @@ export default function App() {
     const threshold = Date.now() - 1000 * 60 * 60 * 24 * 180;
     return visibleRepos.filter((repo) => {
       if (query) {
-        const haystack = `${repo.name} ${repo.description}`.toLowerCase();
+        const haystack =
+          `${repo.name} ${repo.description} ${repo.topics.join(" ")} ${repo.license ?? ""}`.toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       if (languageFilter !== "all" && repo.language !== languageFilter) return false;
       if (showUnlisted && repo.tags.length > 0) return false;
-      if (recentOnly && repo.updatedAt) {
-        const updatedAt = Date.parse(repo.updatedAt);
-        if (!Number.isNaN(updatedAt) && updatedAt < threshold) return false;
+      if (recentOnly) {
+        const activityAt = Date.parse(repo.pushedAt || repo.updatedAt || "");
+        if (!Number.isNaN(activityAt) && activityAt < threshold) return false;
       }
       return true;
     });
@@ -205,47 +260,45 @@ export default function App() {
   }, []);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="brand">
-          <div className="brand-logo">
-            <img src="/logo.png" alt="" width={40} height={40} decoding="async" />
+    <div className={shell.shell}>
+      <header className={shell.header}>
+        <div className={shell.brand}>
+          <div className={shell.logo}>
+            <img src="/favicon.svg" alt="" width={40} height={40} decoding="async" />
           </div>
           <div>
-            <h1 className="brand-title">{t("common.appName")}</h1>
-            <p className="brand-subtitle">{t("app.subtitle")}</p>
+            <h1 className={shell.title}>{t("common.appName")}</h1>
+            <p className={shell.subtitle}>{t("app.subtitle")}</p>
           </div>
         </div>
-        <div className="header-actions">
-          <button className="button" onClick={() => setIsPatModalOpen(true)}>
+        <div className={shell.actions}>
+          {isSyncing ? (
+            <span className={shell.synced}>{t("app.sync.status.running")}</span>
+          ) : preferences.lastSyncedAt ? (
+            <span className={shell.synced}>
+              {t("app.sync.status.completed")} {formatIsoDate(preferences.lastSyncedAt)}
+            </span>
+          ) : null}
+          <button className={controls.button} onClick={() => setIsPatModalOpen(true)}>
             {preferences.viewerLogin
               ? `PAT: ${preferences.viewerLogin}`
               : t("app.actions.connectPat")}
           </button>
-          <button className="button" onClick={() => setIsSettingsOpen(true)}>
+          <button className={controls.button} onClick={() => setIsSettingsOpen(true)}>
             {t("common.actions.settings")}
           </button>
           <button
-            className="button primary"
-            onClick={async () => {
-              if (!preferences.patToken) {
-                setIsPatModalOpen(true);
-                return;
-              }
-              try {
-                const result = await syncFromGitHub({ token: preferences.patToken });
-                setFailedListIds(result.failedListIds);
-                setLastSyncedAt(new Date().toISOString());
-              } catch (error) {
-                window.alert((error as Error).message || t("app.sync.detail.syncFailed"));
-              }
+            className={`${controls.button} ${controls.primary}`}
+            disabled={isSyncing}
+            onClick={() => {
+              void runSync();
             }}
           >
             {t("app.actions.syncStarLists")}
           </button>
           {failedListIds.length > 0 ? (
             <button
-              className="button"
+              className={controls.button}
               onClick={async () => {
                 if (!preferences.patToken) return;
                 try {
@@ -265,161 +318,45 @@ export default function App() {
         </div>
       </header>
 
-      <main className="app-main">
+      <main className={shell.main}>
         {listSidebarOpen ? (
-          <div
-            className="list-sidebar-backdrop"
-            aria-hidden
-            onClick={() => setListSidebarOpen(false)}
-          />
+          <div className={shell.backdrop} aria-hidden onClick={() => setListSidebarOpen(false)} />
         ) : null}
-        <section className={`panel panel--star-lists ${listSidebarOpen ? "is-open" : ""}`}>
-          <div className="panel-heading panel-heading--list-sidebar">
-            <button
-              type="button"
-              className="list-sidebar-close-btn"
-              onClick={() => setListSidebarOpen(false)}
-              aria-label={t("app.nav.closeListSidebar")}
-            >
-              ✕
-            </button>
-            <h2>{t("app.sections.starLists")}</h2>
-            <button type="button" className="button" onClick={() => setIsManageListsOpen(true)}>
-              {t("app.actions.manageLists")}
-            </button>
-          </div>
-          {lists.filter((l) => l.id !== "all" && l.id !== "unclassified").length === 0 ? (
-            <p className="helper-text list-panel-hint">{t("app.empty.noListsHint")}</p>
-          ) : null}
-          {lists.map((list) => (
-            <div
-              key={list.id}
-              className={`list-item ${activeList === list.id ? "active" : ""}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                setActiveList(list.id);
-                setListSidebarOpen(false);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  setActiveList(list.id);
-                  setListSidebarOpen(false);
-                }
-              }}
-            >
-              <span>
-                {list.id === "all"
-                  ? t("common.values.allStarred")
-                  : list.id === "unclassified"
-                    ? t("common.values.unclassified")
-                    : list.name}
-              </span>
-              <span>{list.count}</span>
-            </div>
-          ))}
-        </section>
-
-        <section className="panel panel--repos">
-          <div className="repo-panel-toolbar">
-            <button
-              type="button"
-              className="button list-sidebar-open-btn"
-              onClick={() => setListSidebarOpen(true)}
-            >
-              <span className="list-sidebar-open-icon" aria-hidden>
-                ☰
-              </span>
-              <span className="list-sidebar-open-text">{t("app.nav.openStarLists")}</span>
-              <span className="list-sidebar-active-chip">{activeListLabel}</span>
-            </button>
-          </div>
-          <h2>{t("app.sections.repositories")}</h2>
-          {repos.length === 0 ? (
-            <div className="empty-state">
-              <p>{t("app.empty.noDataTitle")}</p>
-              <p>{t("app.empty.noDataHint")}</p>
-            </div>
-          ) : (
-            <div className="filters">
-              <div className="filter-group">
-                <label htmlFor="language-select">{t("common.labels.language")}</label>
-                <select
-                  id="language-select"
-                  value={languageFilter}
-                  onChange={(event) => setLanguageFilter(event.target.value)}
-                >
-                  {languageOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === "all" ? t("common.values.all") : option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={showUnlisted}
-                  onChange={(event) => setShowUnlisted(event.target.checked)}
-                />
-                {t("app.filters.noList")}
-              </label>
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={recentOnly}
-                  onChange={(event) => setRecentOnly(event.target.checked)}
-                />
-                {t("app.filters.updatedLastSixMonths")}
-              </label>
-              <div className="filter-group search">
-                <label htmlFor="repo-search">{t("common.labels.search")}</label>
-                <input
-                  id="repo-search"
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder={t("app.filters.searchPlaceholder")}
-                />
-              </div>
-            </div>
-          )}
-          {repos.length > 0 && filteredRepos.length === 0 ? (
-            <div className="empty-state">
-              <p>{t("app.empty.noFilteredTitle")}</p>
-              <p>{t("app.empty.noFilteredHint")}</p>
-            </div>
-          ) : repos.length === 0 ? null : (
-            <div className="repo-grid">
-              {filteredRepos.map((repo) => (
-                <article key={repo.id} className="repo-card">
-                  <h3 className="repo-title">{repo.name}</h3>
-                  <p className="repo-desc">{repo.description || t("app.values.noDescription")}</p>
-                  <div className="repo-tags">
-                    {repo.tags.map((tag) => (
-                      <span className="tag" key={tag}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="repo-meta">
-                    <span>{repo.language || t("common.labels.unknown")}</span>
-                    <span>★ {repo.stars ?? 0}</span>
-                  </div>
-                  <button
-                    className="button"
-                    onClick={() => setAssignRepo({ id: repo.id, name: repo.name })}
-                  >
-                    {t("app.actions.assignList")}
-                  </button>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+        <ListRail
+          lists={lists}
+          activeList={activeList}
+          open={listSidebarOpen}
+          onSelect={(id) => {
+            setActiveList(id);
+            setListSidebarOpen(false);
+          }}
+          onClose={() => setListSidebarOpen(false)}
+          onManage={() => setIsManageListsOpen(true)}
+        />
+        <RepoCatalog
+          repos={repos}
+          filteredRepos={filteredRepos}
+          languageOptions={languageOptions}
+          languageFilter={languageFilter}
+          showUnlisted={showUnlisted}
+          recentOnly={recentOnly}
+          searchQuery={searchQuery}
+          activeListLabel={activeListLabel}
+          onOpenRail={() => setListSidebarOpen(true)}
+          onLanguageFilter={setLanguageFilter}
+          onShowUnlisted={setShowUnlisted}
+          onRecentOnly={setRecentOnly}
+          onSearch={setSearchQuery}
+          onAssign={setAssignRepo}
+        />
       </main>
 
-      {!preferences.hasCompletedOnboarding ? (
+      {showPatRequiredPrompt ? (
+        <PatRequiredPrompt
+          onEnterToken={() => setIsPatModalOpen(true)}
+          onLater={() => setPatIntroDismissed(true)}
+        />
+      ) : !preferences.hasCompletedOnboarding ? (
         <FirstRunPrompt
           onConfirm={(value) => {
             setReadmeOptIn(value);
@@ -433,7 +370,9 @@ export default function App() {
       ) : null}
       <PatModal
         isOpen={isPatModalOpen}
-        onClose={() => setIsPatModalOpen(false)}
+        onClose={() => {
+          setIsPatModalOpen(false);
+        }}
         onSave={async (token) => {
           try {
             const viewer = await validatePat(token);

@@ -8,6 +8,9 @@ import {
   deleteUserListOnGitHub,
   updateUserListOnGitHub,
 } from "../services/githubStarLists";
+import dialog from "../styles/dialog.module.css";
+import controls from "../styles/controls.module.css";
+import lists from "./lists.module.css";
 
 type ManageListsModalProps = {
   isOpen: boolean;
@@ -88,15 +91,11 @@ export function ManageListsModal({
     setError("");
     try {
       if (editingId) {
-        const updated = await updateUserListOnGitHub(
-          { token: patToken },
-          editingId,
-          {
-            name: trimmed,
-            description: description.trim(),
-            isPrivate,
-          }
-        );
+        const updated = await updateUserListOnGitHub({ token: patToken }, editingId, {
+          name: trimmed,
+          description: description.trim(),
+          isPrivate,
+        });
         await db.lists.put({
           id: updated.id,
           name: updated.name,
@@ -125,9 +124,7 @@ export function ManageListsModal({
 
   const handleDelete = async (listId: string, listName: string) => {
     if (!requirePat()) return;
-    if (
-      !window.confirm(t("listManage.deleteConfirm", { name: listName }))
-    ) {
+    if (!window.confirm(t("listManage.deleteConfirm", { name: listName }))) {
       return;
     }
     setBusy(true);
@@ -146,107 +143,103 @@ export function ManageListsModal({
   if (!isOpen) return null;
 
   return (
-    <div className="drawer" role="dialog" aria-modal="true">
-      <div className="drawer-panel settings">
-        <button className="panel-close" onClick={onClose} aria-label={t("listManage.closeAria")}>
+    <div className={dialog.overlay} role="dialog" aria-modal="true">
+      <div className={dialog.panel}>
+        <button className={dialog.close} onClick={onClose} aria-label={t("listManage.closeAria")}>
           ✕
         </button>
-        <div className="settings-scroll">
-          <h3>{t("listManage.title")}</h3>
-          <p>{t("listManage.intro")}</p>
+        <h3>{t("listManage.title")}</h3>
+        <p>{t("listManage.intro")}</p>
 
-          <div className="settings-section">
-            <h4>{editingId ? t("listManage.editSection") : t("listManage.createSection")}</h4>
-            <div className="input-row">
-              <label htmlFor="list-name">{t("listManage.nameLabel")}</label>
-              <input
-                id="list-name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={busy}
-              />
-            </div>
-            <div className="input-row">
-              <label htmlFor="list-desc">{t("listManage.descriptionLabel")}</label>
-              <textarea
-                id="list-desc"
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={busy}
-              />
-            </div>
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={isPrivate}
-                onChange={(e) => setIsPrivate(e.target.checked)}
-                disabled={busy}
-              />
-              {t("listManage.isPrivate")}
-            </label>
-            <div className="settings-actions">
-              <button className="button primary" type="button" onClick={handleSubmit} disabled={busy}>
-                {busy
-                  ? editingId
-                    ? t("listManage.status.saving")
-                    : t("listManage.status.creating")
-                  : editingId
-                    ? t("listManage.save")
-                    : t("listManage.create")}
+        <div className={dialog.section}>
+          <h4>{editingId ? t("listManage.editSection") : t("listManage.createSection")}</h4>
+          <div className={controls.field}>
+            <label htmlFor="list-name">{t("listManage.nameLabel")}</label>
+            <input
+              id="list-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={busy}
+            />
+          </div>
+          <div className={controls.field}>
+            <label htmlFor="list-desc">{t("listManage.descriptionLabel")}</label>
+            <textarea
+              id="list-desc"
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={busy}
+            />
+          </div>
+          <label className={controls.check}>
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+              disabled={busy}
+            />
+            {t("listManage.isPrivate")}
+          </label>
+          <div className={controls.actions}>
+            <button
+              className={`${controls.button} ${controls.primary}`}
+              type="button"
+              onClick={handleSubmit}
+              disabled={busy}
+            >
+              {busy
+                ? editingId
+                  ? t("listManage.status.saving")
+                  : t("listManage.status.creating")
+                : editingId
+                  ? t("listManage.save")
+                  : t("listManage.create")}
+            </button>
+            {editingId ? (
+              <button className={controls.button} type="button" onClick={cancelEdit} disabled={busy}>
+                {t("listManage.cancelEdit")}
               </button>
-              {editingId ? (
-                <button className="button" type="button" onClick={cancelEdit} disabled={busy}>
-                  {t("listManage.cancelEdit")}
-                </button>
-              ) : null}
-            </div>
+            ) : null}
           </div>
-
-          <div className="settings-section">
-            <h4>{t("listManage.existingSection")}</h4>
-            {listRows.length === 0 ? (
-              <p className="helper-text">{t("listManage.empty")}</p>
-            ) : (
-              <div className="list-manage-table">
-                <div className="list-manage-head">
-                  <span>{t("listManage.nameLabel")}</span>
-                  <span>{t("listManage.reposColumn")}</span>
-                  <span>{t("listManage.actionsColumn")}</span>
-                </div>
-                {listRows.map((list) => (
-                  <div className="list-manage-row" key={list.id}>
-                    <span className="list-manage-name" title={list.description || undefined}>
-                      {list.name}
-                    </span>
-                    <span>{countByList.get(list.id) ?? 0}</span>
-                    <span className="list-manage-actions">
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() => startEdit(list.id)}
-                        disabled={busy}
-                      >
-                        {t("listManage.edit")}
-                      </button>
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() => handleDelete(list.id, list.name)}
-                        disabled={busy}
-                      >
-                        {t("listManage.delete")}
-                      </button>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {error ? <p className="helper-text">{error}</p> : null}
         </div>
+
+        <div className={dialog.section}>
+          <h4>{t("listManage.existingSection")}</h4>
+          {listRows.length === 0 ? (
+            <p className={controls.muted}>{t("listManage.empty")}</p>
+          ) : (
+            <div className={lists.table}>
+              <div className={lists.head}>
+                <span>{t("listManage.nameLabel")}</span>
+                <span>{t("listManage.reposColumn")}</span>
+                <span>{t("listManage.actionsColumn")}</span>
+              </div>
+              {listRows.map((list) => (
+                <div className={lists.row} key={list.id}>
+                  <span title={list.description || undefined}>{list.name}</span>
+                  <span>{countByList.get(list.id) ?? 0}</span>
+                  <span className={lists.rowActions}>
+                    <button type="button" className={controls.button} onClick={() => startEdit(list.id)} disabled={busy}>
+                      {t("listManage.edit")}
+                    </button>
+                    <button
+                      type="button"
+                      className={controls.button}
+                      onClick={() => handleDelete(list.id, list.name)}
+                      disabled={busy}
+                    >
+                      {t("listManage.delete")}
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {error ? <p className={controls.muted}>{error}</p> : null}
       </div>
     </div>
   );

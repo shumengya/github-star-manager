@@ -22,6 +22,16 @@ export type SyncResult = {
   failedListIds: string[];
 };
 
+export const STALE_SYNC_AFTER_MS = 24 * 60 * 60 * 1000;
+
+export function isLastSyncStale(lastSyncedAt: string, now = Date.now()): boolean {
+  const raw = lastSyncedAt.trim();
+  if (!raw) return true;
+  const then = Date.parse(raw);
+  if (Number.isNaN(then)) return true;
+  return now - then >= STALE_SYNC_AFTER_MS;
+}
+
 type RetryResult = {
   failedListIds: string[];
 };
@@ -101,9 +111,26 @@ export async function syncFromGitHub(
         repoUrl: repo.url,
         topics: repo.topics,
         language: repo.language,
+        languageColor: repo.languageColor,
         updatedAt: repo.updatedAt,
+        pushedAt: repo.pushedAt,
+        createdAt: repo.createdAt,
+        starredAt: repo.starredAt,
         readmeExcerpt: "",
         stargazerCount: repo.stargazerCount,
+        forkCount: repo.forkCount,
+        openIssuesCount: repo.openIssuesCount,
+        watcherCount: repo.watcherCount,
+        isArchived: repo.isArchived,
+        isFork: repo.isFork,
+        isTemplate: repo.isTemplate,
+        isPrivate: repo.isPrivate,
+        license: repo.license,
+        homepageUrl: repo.homepageUrl,
+        ownerLogin: repo.ownerLogin,
+        ownerAvatarUrl: repo.ownerAvatarUrl,
+        parentFullName: repo.parentFullName,
+        defaultBranch: repo.defaultBranch,
       }))
     );
 

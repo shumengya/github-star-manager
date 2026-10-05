@@ -29,13 +29,13 @@ export const resources = {
         },
       },
       app: {
-        subtitle: "Organize GitHub Star Lists with confidence.",
+        subtitle: "Sort your GitHub stars into lists.",
         actions: {
-          assignList: "Assign List",
+          assignList: "Assign list",
           connectPat: "Connect PAT",
           manageLists: "Manage lists",
           retryFailedLists: "Retry failed lists ({{count}})",
-          syncStarLists: "Sync Star Lists",
+          syncStarLists: "Sync",
         },
         sections: {
           repositories: "Repositories",
@@ -56,7 +56,7 @@ export const resources = {
             tokenValidationFailed: "Token validation failed",
           },
           status: {
-            completed: "Completed",
+            completed: "Synced",
             failed: "Failed",
             idle: "Idle",
             ready: "Ready",
@@ -66,19 +66,30 @@ export const resources = {
         },
         filters: {
           noList: "No list",
-          searchPlaceholder: "Search name or description",
-          updatedLastSixMonths: "Updated last 6 months",
+          searchPlaceholder: "Search name, description, or topic",
+          updatedLastSixMonths: "Pushed in the last 6 months",
         },
         empty: {
           noListsTitle: "No Star Lists loaded yet.",
           noListsHint: "Run a sync to import your existing lists.",
-          noDataTitle: "No data yet.",
-          noDataHint: "Connect your PAT and run a sync to load your starred repos.",
+          noDataTitle: "No catalog yet.",
+          noDataHint: "Add a GitHub token, then tap Sync.",
           noFilteredTitle: "No repositories match the current filters.",
           noFilteredHint: "Try clearing filters or sync your Star Lists first.",
         },
         values: {
           noDescription: "No description",
+        },
+        repo: {
+          archived: "Archived",
+          fork: "Fork",
+          template: "Template",
+          forks: "Forks",
+          issues: "Issues",
+          starredAt: "Starred",
+          pushedAt: "Pushed",
+          homepage: "Website",
+          forkedFrom: "Forked from {{name}}",
         },
         nav: {
           openStarLists: "Categories",
@@ -100,6 +111,20 @@ export const resources = {
           "We store your token locally to access your Star Lists. Recommended scopes: repo, read:user, read:star.",
         tokenLabel: "Personal access token",
         savePat: "Save PAT",
+      },
+      patRequired: {
+        title: "GitHub token required",
+        intro:
+          "Star Manager talks to GitHub as you. Without a Personal Access Token it cannot load starred repositories or Star Lists.",
+        classicHint: "Create a classic token and grant these scopes:",
+        scopes: {
+          repo: "Read repositories (including private ones) and manage list membership.",
+          user: "Read your profile, stars, and Star Lists.",
+        },
+        storageNote: "The token is saved only in this browser. It is never uploaded to this site's server.",
+        createLink: "Open GitHub and create a token",
+        later: "Later",
+        enterToken: "Enter token",
       },
       settings: {
         closeAria: "Close settings",
@@ -226,13 +251,13 @@ export const resources = {
         },
       },
       app: {
-        subtitle: "更安心地管理 GitHub Star Lists。",
+        subtitle: "把 GitHub 收藏收进列表。",
         actions: {
           assignList: "分配列表",
           connectPat: "连接 PAT",
           manageLists: "管理列表",
           retryFailedLists: "重试失败列表（{{count}}）",
-          syncStarLists: "同步 Star Lists",
+          syncStarLists: "同步",
         },
         sections: {
           repositories: "仓库",
@@ -253,7 +278,7 @@ export const resources = {
             tokenValidationFailed: "Token 校验失败",
           },
           status: {
-            completed: "已完成",
+            completed: "已同步",
             failed: "失败",
             idle: "空闲",
             ready: "就绪",
@@ -263,19 +288,30 @@ export const resources = {
         },
         filters: {
           noList: "无列表",
-          searchPlaceholder: "搜索名称或描述",
-          updatedLastSixMonths: "近 6 个月有更新",
+          searchPlaceholder: "搜索名称、描述或 topic",
+          updatedLastSixMonths: "近 6 个月有推送",
         },
         empty: {
           noListsTitle: "尚未加载 Star 列表。",
           noListsHint: "执行一次同步即可导入你已有的列表。",
-          noDataTitle: "暂无数据。",
-          noDataHint: "连接 PAT 并执行同步后即可加载已收藏仓库。",
+          noDataTitle: "还没有目录。",
+          noDataHint: "先填 GitHub 密钥，再点同步。",
           noFilteredTitle: "当前筛选条件下没有匹配仓库。",
           noFilteredHint: "尝试清空筛选，或先同步 Star 列表。",
         },
         values: {
           noDescription: "暂无描述",
+        },
+        repo: {
+          archived: "已归档",
+          fork: "Fork",
+          template: "模板",
+          forks: "Fork",
+          issues: "Issue",
+          starredAt: "收藏于",
+          pushedAt: "最近推送",
+          homepage: "主页",
+          forkedFrom: "Fork 自 {{name}}",
         },
         nav: {
           openStarLists: "分类",
@@ -296,6 +332,20 @@ export const resources = {
           "Token 仅保存在本地，用于访问你的 Star Lists。建议权限：repo、read:user、read:star。",
         tokenLabel: "个人访问令牌",
         savePat: "保存 PAT",
+      },
+      patRequired: {
+        title: "需要 GitHub 密钥",
+        intro:
+          "本应用会以你的身份访问 GitHub。没有 Personal Access Token，就无法读取已收藏仓库和 Star Lists。",
+        classicHint: "请创建 Classic Token，并勾选以下权限：",
+        scopes: {
+          repo: "读取仓库（含私有仓），以及改写 Star List 成员。",
+          user: "读取你的账号、收藏和 Star Lists。",
+        },
+        storageNote: "密钥只保存在当前浏览器，不会上传到本站服务器。",
+        createLink: "打开 GitHub 创建 Token",
+        later: "稍后再说",
+        enterToken: "填写密钥",
       },
       settings: {
         closeAria: "关闭设置",

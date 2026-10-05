@@ -1,0 +1,56 @@
+:root {
+  --ink: #322c28;
+  --paper: #f4ede4;
+  --surface: #fff8f1;
+  --lamp: #efe4d6;
+  --rule: #e6d8c8;
+  --steel: #7d7268;
+  --orbit: #3f5f8a;
+  --orbit-soft: rgba(63, 95, 138, 0.1);
+  --font: "Maple Mono", "LXGW WenKai Mono", ui-monospace, monospace;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 400;
+  line-height: 1.65;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+#app {
+  height: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--orbit);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

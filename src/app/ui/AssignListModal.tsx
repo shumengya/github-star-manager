@@ -4,6 +4,9 @@ import { setRepoListMembership } from "../core/repoListAssignments";
 import { syncRepoListAssignmentToGitHub } from "../core/syncRepoListToGitHub";
 import { db } from "../data/db";
 import { useLiveQuery } from "../data/useLiveQuery";
+import dialog from "../styles/dialog.module.css";
+import controls from "../styles/controls.module.css";
+import lists from "./lists.module.css";
 
 type AssignListModalProps = {
   isOpen: boolean;
@@ -27,17 +30,8 @@ export function AssignListModal({
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState("");
 
-  const lists = useLiveQuery(
-    async () => db.lists.orderBy("name").toArray(),
-    [],
-    []
-  );
-
-  const repoList = useLiveQuery(
-    async () => db.repoLists.get(repoId),
-    [repoId],
-    undefined
-  );
+  const listRows = useLiveQuery(async () => db.lists.orderBy("name").toArray(), [], []);
+  const repoList = useLiveQuery(async () => db.repoLists.get(repoId), [repoId], undefined);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -77,42 +71,40 @@ export function AssignListModal({
   };
 
   return (
-    <div className="drawer" role="dialog" aria-modal="true">
-      <div className="drawer-panel settings">
-        <button className="panel-close" onClick={onClose} aria-label={t("assignList.closeAria")}>
+    <div className={dialog.overlay} role="dialog" aria-modal="true">
+      <div className={dialog.panel}>
+        <button className={dialog.close} onClick={onClose} aria-label={t("assignList.closeAria")}>
           ✕
         </button>
-        <div className="settings-scroll">
-          <h3>{t("assignList.title")}</h3>
-          <p>{t("assignList.description", { repoName })}</p>
-          <div className="settings-section">
-            <h4>{t("assignList.sections.lists")}</h4>
-            {lists.length === 0 ? (
-              <p className="helper-text">{t("assignList.status.noLists")}</p>
-            ) : (
-              <div className="assign-list-grid">
-                {lists.map((list) => (
-                  <label className="assign-list-item" key={list.id}>
-                    <input
-                      type="checkbox"
-                      checked={selectedSet.has(list.id)}
-                      onChange={() => toggleList(list.id)}
-                    />
-                    <span>{list.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            <div className="settings-actions">
-              <button className="button" onClick={() => setSelectedListIds([])} disabled={isSaving}>
-                {t("common.actions.clear")}
-              </button>
-              <button className="button primary" onClick={handleSave} disabled={isSaving}>
-                {isSaving ? t("assignList.status.saving") : t("common.actions.save")}
-              </button>
+        <h3>{t("assignList.title")}</h3>
+        <p>{t("assignList.description", { repoName })}</p>
+        <div className={dialog.section}>
+          <h4>{t("assignList.sections.lists")}</h4>
+          {listRows.length === 0 ? (
+            <p className={controls.muted}>{t("assignList.status.noLists")}</p>
+          ) : (
+            <div className={lists.grid}>
+              {listRows.map((list) => (
+                <label className={lists.item} key={list.id}>
+                  <input
+                    type="checkbox"
+                    checked={selectedSet.has(list.id)}
+                    onChange={() => toggleList(list.id)}
+                  />
+                  <span>{list.name}</span>
+                </label>
+              ))}
             </div>
-            {status ? <p className="helper-text">{status}</p> : null}
+          )}
+          <div className={controls.actions}>
+            <button className={controls.button} onClick={() => setSelectedListIds([])} disabled={isSaving}>
+              {t("common.actions.clear")}
+            </button>
+            <button className={`${controls.button} ${controls.primary}`} onClick={handleSave} disabled={isSaving}>
+              {isSaving ? t("assignList.status.saving") : t("common.actions.save")}
+            </button>
           </div>
+          {status ? <p className={controls.muted}>{status}</p> : null}
         </div>
       </div>
     </div>

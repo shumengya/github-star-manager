@@ -1,185 +1,162 @@
-# Star Manager
+<div align="center">
 
-[中文文档 (Simplified Chinese)](./README.zh-CN.md)
+# GitHub Star Manager
 
-Star Manager is a local-first web app for organizing GitHub starred repositories with Star Lists and optional LLM-assisted classification.
+**A local-first web app to organize your GitHub starred repositories with Star Lists.**
 
-An [online deployment](https://github-star-manager.blackzero.edu.kg) is available if you want to explore the app without setting up locally.
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](./LICENSE)
+[![React 19](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)](https://react.dev)
+[![Vite 7](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=white)](https://vite.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Cloudflare Pages](https://img.shields.io/badge/Deploy-Cloudflare%20Pages-f38020?logo=cloudflare&logoColor=white)](https://pages.cloudflare.com)
 
+[Live Demo](https://github-star-manager.blackzero.edu.kg) · [中文文档](./README.zh-CN.md)
+
+</div>
+
+---
 
 ## Why Star Manager
 
-If you have hundreds of starred repositories, manual list management is slow and inconsistent. Star Manager helps you:
+Once you star a few hundred repositories, GitHub's flat star list becomes hard to navigate. Star Manager gives you a fast, searchable workspace on top of GitHub's **Star Lists** feature:
 
-- Sync your starred repositories and Star Lists from GitHub.
-- Classify repositories in batches with an OpenAI-compatible LLM.
-- Review diffs before any write-back.
-- Apply updates to GitHub with explicit progress and issue reporting.
-- Keep your working data in browser local storage (IndexedDB via Dexie).
+- **Sync** your starred repositories and Star Lists from GitHub, with automatic staleness detection (24h) and retry for failed list scans.
+- **Browse & filter** your stars by list, language, search query, ungrouped-only, or recently starred.
+- **Organize** repos into lists with a couple of clicks — locally first, then write back to GitHub.
+- **Manage lists** (create / rename / delete) directly in the app; changes are applied to your GitHub account.
+- **Local-first**: all working data lives in your browser (IndexedDB via Dexie). Your PAT never leaves your browser except to GitHub (through a thin proxy, see below).
 
-## Key Capabilities
+## How It Works
 
-- GitHub sync with progress:
-  - Fetches starred repositories and Star Lists.
-  - Scans list memberships.
-  - Supports retry for failed list membership scans.
-- Classification pipeline:
-  - Two-stage tagging (repo tagging + tag compression).
-  - Test mode (small sample) and strict single-tag mode.
-  - Diff view against existing Star Lists or a previous classification run.
-- Write-back workflow:
-  - Preview planned changes (`Current` vs `After`) before apply.
-  - Creates missing lists when needed during apply.
-  - Optional re-plan before apply.
-  - Confirms behavior for repos not currently starred.
-- Local editing:
-  - Assign list memberships per repo in UI before write-back.
-- i18n:
-  - English/Chinese UI with browser language auto-detection and manual override.
+The app runs entirely in the browser and talks to the GitHub API through a same-origin proxy that avoids CORS friction:
 
-## Prerequisites
+```text
+┌────────────┐   /api/github/*    ┌──────────────────────┐   https://api.github.com
+│  Browser   │ ─────────────────► │  Thin proxy layer    │ ────────────────────────►  GitHub
+│ (React 19) │                    │ • Dev: Vite proxy    │
+└────────────┘                    │ • Prod: CF Functions │
+     │  IndexedDB (Dexie)         └──────────────────────┘
+     └─ repos / lists / memberships / README excerpts
+```
 
-- Node.js 20+ (LTS recommended)
-- `pnpm`
-- A GitHub Personal Access Token (PAT)
-- Optional: an OpenAI-compatible LLM endpoint for classification
+- **Development** — the built-in Vite dev-server proxy (`vite.config.ts`) forwards `/api/github/*` to `api.github.com`.
+- **Production** — [Cloudflare Pages Functions](https://developers.cloudflare.com/pages/functions/) under `functions/api/github/` do the same forwarding, so the deployed app never hits CORS issues.
+
+Your GitHub PAT is sent as an `Authorization` header by your browser and forwarded as-is; it is **not** logged or stored anywhere server-side.
+
+## Features
+
+- ⭐ **Star sync** — fetch starred repos + Star Lists, scan list memberships, retry failed scans individually.
+- 🗂 **List workspace** — sidebar with *All starred* / *Unclassified* / your custom lists, with live counts.
+- 🔍 **Filtering & search** — full-text search over repo names/descriptions, language filter, ungrouped-only and recent-only toggles.
+- 📋 **README excerpts** — opt-in preview of each repo's README to help you decide where it belongs.
+- ✏️ **Assign repos to lists** — multi-list assignment per repo, previewed locally before write-back.
+- 🛠 **List management** — create, rename, and delete Star Lists, synced to GitHub.
+- 🌐 **i18n** — English / Simplified Chinese UI with browser-language auto-detection and manual override.
+- 🧹 **Cache control** — clear local cache from Settings at any time.
 
 ## Quick Start
 
+**Prerequisites**: Node.js 20+, [pnpm](https://pnpm.io), and a GitHub Personal Access Token (PAT).
+
 ```bash
 pnpm install
-pnpm dev
+pnpm dev      # start dev server (API proxy included)
 ```
 
-Build and preview:
+Build for production and preview locally:
 
 ```bash
 pnpm build
 pnpm preview
 ```
 
-## Configuration
+## Deploy Your Own (Cloudflare Pages)
 
-### 1) GitHub PAT
+This project is designed for [Cloudflare Pages](https://pages.cloudflare.com):
 
-In the app:
+| Setting | Value |
+| --- | --- |
+| Build command | `pnpm build` |
+| Build output directory | `dist` |
+| Root directory | `/` |
+| Node version | 20+ (set `NODE_VERSION=20` env var if needed) |
 
-1. Open `Settings` or `Connect PAT`.
-2. Paste your token.
-3. Validate and save.
+The `functions/api/github/` directory is picked up by Cloudflare Pages automatically — no extra configuration required.
 
-The token must be able to read your starred repositories and access Star Lists operations for your account. If validation fails, check token scopes/permissions and account feature availability.
+## Getting a GitHub PAT
 
-### 2) LLM (Optional)
+1. Open <https://github.com/settings/tokens>.
+2. **Generate new token → Generate new token (classic)**.
+3. Give it a name (e.g. `star-manager`) and grant the scopes:
+   - `repo` — read stars, manage lists
+   - `user` — read your profile
+4. Copy the token. In the app: **Settings → GitHub PAT** (or the onboarding prompt), paste, and validate.
 
-In `Settings -> LLM Configuration`, set:
+The token is validated against the GitHub GraphQL API and stored only in your browser's localStorage.
 
-- `baseUrl` (default: `https://api.openai.com/v1`)
-- `apiKey`
-- `model` (default: `gpt-4o-mini`)
-- `temperature`
-- `maxTokens`
+## Usage
 
-You can run classification without changing prompts, or customize prompts for:
-
-- default tagging mode
-- strict single-tag mode
-- existing-list constrained modes
-- English/Chinese prompt variants
-
-## Usage Guide
-
-### Step 1: Obtain a GitHub Personal Access Token
-
-1. Go to [https://github.com/settings/tokens](https://github.com/settings/tokens).
-2. Click **Generate new token** → **Generate new token (classic)**.
-3. Give it a descriptive name (e.g. `star-manager`).
-4. Grant the following permission scopes:
-   - **repo** — all permissions under `repo`
-   - **user** — all permissions under `user`
-5. Click **Generate token** and copy the generated token.
-
-After obtaining the token, open the app and click **Sync Star Lists** to verify that the token works and your starred repositories can be synced successfully.
-
-### Step 2: Configure the App
-
-#### GitHub Token
-
-1. Open the app's **Settings** page (or click **Connect PAT**).
-2. Paste the token you generated in Step 1.
-3. Click **Validate** to verify and save.
-
-#### LLM Configuration
-
-1. In **Settings → LLM Configuration**, fill in:
-   - **Base URL** — the endpoint of your OpenAI-compatible LLM service.
-   - **API Key** — your LLM API key.
-   - **Model Name** — the model to use for classification.
-2. Click **Run Classification** to start the classification pipeline.
-3. It is recommended to use **Test Mode** first to run a small sample and verify that the model is working correctly before processing all repositories.
-
-### Step 3: Apply Updates to GitHub
-
-1. After classification is complete, review the diff preview.
-2. Click **Apply Updates** to push the classification results (Star List assignments) to your GitHub account.
-3. The app will create any missing Star Lists and update repository memberships accordingly.
+1. **Connect** — paste your PAT and validate it.
+2. **Sync** — click *Sync* to pull your stars and lists. Data older than 24h is flagged as stale and re-synced automatically.
+3. **Browse** — use the sidebar lists, search box, language filter, and toggles (ungrouped / recent) to find repos.
+4. **Organize** — click a repo's *Assign* action to add/remove its lists, or open *Manage Lists* to create/rename/delete lists.
+5. **Write back** — assignments are pushed to GitHub when you save them from the assign dialog.
 
 ## Project Structure
 
 ```text
-src/app/
-  App.tsx                 # Main UI shell
-  core/                   # Use-cases and orchestration
-  services/               # GitHub + LLM clients
-  data/                   # Dexie DB and reactive query helpers
-  store/                  # Local preferences and LLM config stores
-  ui/                     # UI components and modals
-  i18n/                   # Translation resources and language helpers
-  styles/                 # CSS styles
+functions/api/github/       # Cloudflare Pages Functions (API proxy)
+public/                     # Static assets (favicons, logo, legacy SW cleanup)
+src/
+  main.tsx                  # App entry
+  app/
+    App.tsx                 # Main UI shell & orchestration
+    layout/                 # App shell, list sidebar, repo catalog & rows
+    core/                   # Use-cases: sync, queues, write-back, purge
+    services/               # GitHub REST/GraphQL clients & auth
+    data/                   # Dexie DB schema & reactive queries
+    store/                  # Preferences (PAT, language, readme opt-in)
+    types/                  # Domain types
+    ui/                     # Modals & prompts (PAT, settings, lists, assign)
+    i18n/                   # EN/zh-CN resources & language detection
+    styles/                 # Design tokens, controls, dialogs, fonts
 ```
 
 ## Data & Privacy
 
-- Local-first storage:
-  - App data is stored in browser IndexedDB (`star-manager` database).
-  - Preferences and LLM config are stored in browser local storage.
-- PAT and LLM API key are stored locally in your browser.
-- The app calls GitHub and your configured LLM endpoint directly from the client.
-- Sensitive values should not be logged; avoid sharing browser storage exports.
+- App data is stored in browser **IndexedDB** (database `star-manager`); preferences (PAT, language) in **localStorage**.
+- The app calls GitHub directly (through the same-origin proxy) from your browser — no third-party analytics, no telemetry.
+- The proxy forwards requests verbatim; tokens are never logged or persisted server-side.
+- Avoid exporting/sharing browser storage if your PAT is stored.
 
 ## Troubleshooting
 
-- `Star Lists API not available for this token/account`
-  - Your account or token may not have access to Star Lists GraphQL fields.
-- PAT validation failed
-  - Re-check token value and permissions; regenerate token if needed.
-- LLM test/classification fails
-  - Verify `baseUrl`, `apiKey`, `model`, and endpoint compatibility with `/chat/completions`.
-- No repos shown after sync
-  - Confirm your account has starred repositories and sync completed successfully.
+| Symptom | Fix |
+| --- | --- |
+| `Star Lists API not available for this token/account` | Star Lists GraphQL fields may not be available for your account/token; re-check scopes or account features. |
+| PAT validation failed | Check the token value/scopes; regenerate if needed. |
+| Sync returns no repos | Confirm your account actually has starred repos and sync completed. |
+| Some lists show a retry button | List-membership scan hit rate limits; click retry for the failed lists only. |
 
-## Known Limitations & Roadmap
+## Roadmap
 
-Planned next steps include:
-
-- Incremental sync strategy to reduce repeated work.
-- Better rate-limit handling and failure recovery.
-- Clearer error attribution (permission/token/network categories).
-- README cache policy implementation (`ETag/hash` and truncation strategy).
-- Future quality scripts (`lint`/`test`) are not configured yet.
+- Incremental sync to reduce API calls.
+- Smarter rate-limit handling and failure recovery.
+- Clearer error attribution (permission / token / network).
+- README excerpt caching policy (`ETag`/hash + truncation).
+- Optional LLM-assisted classification (two-stage tagging pipeline).
 
 ## Contributing
 
-Contributions are welcome. For substantial changes, open an issue first to discuss scope.
-
-Local commands:
+Issues and PRs are welcome. For larger changes, please open an issue first to discuss the scope.
 
 ```bash
-pnpm dev
-pnpm build
-pnpm preview
+pnpm install
+pnpm dev      # develop
+pnpm build    # type-check + production build
 ```
 
 ## License
 
-AGPL-3.0 license
+Released under the [AGPL-3.0 License](./LICENSE).

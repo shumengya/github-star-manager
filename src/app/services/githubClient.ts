@@ -1,3 +1,5 @@
+import axios, { isAxiosError } from "axios";
+
 export type GitHubConfig = {
   token: string;
 };
@@ -7,29 +9,38 @@ export type GitHubRequestOptions = {
   retries?: number;
 };
 
-const API_URL = "https://api.github.com";
-const GRAPHQL_URL = "https://api.github.com/graphql";
+const client = axios.create({
+  baseURL: "/api/github",
+  headers: {
+    Accept: "application/vnd.github+json",
+  },
+});
 
-async function requestJson<T>(
-  url: string,
-  init: RequestInit,
-  options: GitHubRequestOptions
-): Promise<T> {
-  const retries = options.retries ?? 2;
+function authHeaders(token: string) {
+  return { Authorization: `bearer ${token}` };
+}
+
+function toError(error: unknown): Error {
+  if (isAxiosError(error)) {
+    const data = error.response?.data;
+    if (typeof data === "string" && data.trim()) return new Error(data);
+    if (data && typeof data === "object" && "message" in data) {
+      const message = (data as { message?: string }).message;
+      if (message) return new Error(message);
+    }
+    return new Error(error.message || `Request failed: ${error.response?.status ?? ""}`);
+  }
+  if (error instanceof Error) return error;
+  return new Error("Request failed");
+}
+
+async function withRetry<T>(run: () => Promise<T>, retries: number): Promise<T> {
   let attempt = 0;
-
   while (true) {
     try {
-      const response = await fetch(url, init);
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Request failed: ${response.status}`);
-      }
-      return (await response.json()) as T;
+      return await run();
     } catch (error) {
-      if (attempt >= retries) {
-        throw error;
-      }
+      if (attempt >= retries) throw toError(error);
       attempt += 1;
       await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
     }
@@ -42,28 +53,29 @@ export async function ghGraphql<T>(
   variables: Record<string, unknown> = {},
   options: GitHubRequestOptions = {}
 ): Promise<T> {
-  const body = JSON.stringify({ query, variables });
-  const response = await requestJson<{ data?: T; errors?: { message: string }[] }>(
-    GRAPHQL_URL,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/vnd.github+json",
-        Authorization: `bearer ${config.token}`,
-      },
-      body,
-      signal: options.signal,
-    },
-    options
-  );
-  if (response.errors && response.errors.length > 0) {
-    throw new Error(response.errors[0].message || "GitHub GraphQL error");
+  const retries = options.retries ?? 2;
+  const payload = await withRetry(async () => {
+    const response = await client.post<{ data?: T; errors?: { message: string }[] }>(
+      "/graphql",
+      { query, variables },
+      {
+        headers: {
+          ...authHeaders(config.token),
+          "Content-Type": "application/json",
+        },
+        signal: options.signal,
+      }
+    );
+    return response.data;
+  }, retries);
+
+  if (payload.errors && payload.errors.length > 0) {
+    throw new Error(payload.errors[0].message || "GitHub GraphQL error");
   }
-  if (!response.data) {
+  if (!payload.data) {
     throw new Error("GitHub GraphQL response missing data");
   }
-  return response.data;
+  return payload.data;
 }
 
 export async function ghRest<T>(
@@ -71,15 +83,12 @@ export async function ghRest<T>(
   path: string,
   options: GitHubRequestOptions = {}
 ): Promise<T> {
-  return requestJson<T>(
-    `${API_URL}${path}`,
-    {
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `bearer ${config.token}`,
-      },
+  const retries = options.retries ?? 2;
+  return withRetry(async () => {
+    const response = await client.get<T>(`/rest${path}`, {
+      headers: authHeaders(config.token),
       signal: options.signal,
-    },
-    options
-  );
+    });
+    return response.data;
+  }, retries);
 }

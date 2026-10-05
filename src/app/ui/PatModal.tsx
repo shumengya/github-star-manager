@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import dialog from "../styles/dialog.module.css";
+import controls from "../styles/controls.module.css";
 
 type PatModalProps = {
   isOpen: boolean;
@@ -14,11 +16,11 @@ export function PatModal({ isOpen, onClose, onSave }: PatModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="drawer" role="dialog" aria-modal="true">
-      <div className="drawer-panel">
+    <div className={dialog.overlay} role="dialog" aria-modal="true">
+      <div className={dialog.panel}>
         <h3>{t("patModal.title")}</h3>
         <p>{t("patModal.description")}</p>
-        <div className="input-row">
+        <div className={controls.field}>
           <label htmlFor="pat-input">{t("patModal.tokenLabel")}</label>
           <input
             id="pat-input"
@@ -28,12 +30,12 @@ export function PatModal({ isOpen, onClose, onSave }: PatModalProps) {
             placeholder="ghp_..."
           />
         </div>
-        <div className="drawer-actions">
-          <button className="button" onClick={onClose}>
+        <div className={controls.actions}>
+          <button className={controls.button} onClick={onClose}>
             {t("common.actions.cancel")}
           </button>
           <button
-            className="button primary"
+            className={`${controls.button} ${controls.primary}`}
             onClick={() => {
               if (!token.trim()) return;
               onSave(token.trim());

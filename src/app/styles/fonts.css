@@ -1,1 +1,22 @@
-@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap");
+@font-face {
+  font-family: "Maple Mono";
+  src: url("https://cdn.smyhub.com/fonts/MapleMono-Regular.ttf.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-024F, U+0250-02AF, U+1D00-1D7F, U+1E00-1EFF, U+2000-206F,
+    U+2070-209F, U+20A0-20CF, U+2100-214F, U+2190-21FF, U+2200-22FF, U+2300-23FF,
+    U+2500-259F, U+25A0-25FF, U+2600-26FF, U+2700-27BF, U+FB00-FB4F;
+}
+
+@font-face {
+  font-family: "LXGW WenKai Mono";
+  src: url("https://cdn.smyhub.com/fonts/LXGWWenKaiMono-Regular.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3040-309F, U+30A0-30FF,
+    U+3100-312F, U+31A0-31BF, U+31C0-31EF, U+31F0-31FF, U+3400-4DBF, U+4E00-9FFF,
+    U+A490-A4CF, U+F900-FAFF, U+FE10-FE1F, U+FE30-FE4F, U+FF00-FFEF, U+20000-2A6DF,
+    U+2A700-2B73F, U+2B740-2B81F, U+2B820-2CEAF, U+2CEB0-2EBEF, U+30000-3134F;
+}

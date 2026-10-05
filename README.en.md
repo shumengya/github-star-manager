@@ -12,6 +12,8 @@
 
 **[🚀 Live Demo](https://gh-star.smyhub.com/)** · [中文文档](./README.md)
 
+![GitHub Star Manager screenshot](docs/images/screenshot.png)
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/shumengya/github-star-manager)
 
 **Click the button above to deploy GitHub Star Manager to your own Cloudflare account in one click.**

@@ -12,6 +12,8 @@
 
 **[🚀 在线体验](https://gh-star.smyhub.com/)** · [English README](./README.en.md)
 
+![GitHub Star Manager 界面预览](docs/images/screenshot.png)
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/shumengya/github-star-manager)
 
 **点上面的按钮，一键把 GitHub Star Manager 部署到你自己的 Cloudflare 账号。**

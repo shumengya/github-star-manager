@@ -403,6 +403,17 @@ export async function addStar(config: GitHubConfig, starrableId: string): Promis
   await ghGraphql(config, query, { input: { starrableId } });
 }
 
+export async function removeStar(config: GitHubConfig, starrableId: string): Promise<void> {
+  const query = `
+    mutation($input: RemoveStarInput!) {
+      removeStar(input: $input) {
+        starrable { id }
+      }
+    }
+  `;
+  await ghGraphql(config, query, { input: { starrableId } });
+}
+
 export async function updateUserListsForItem(
   config: GitHubConfig,
   itemId: string,

@@ -32,6 +32,7 @@ export const resources = {
         subtitle: "Sort your GitHub stars into lists.",
         actions: {
           assignList: "Assign list",
+          unstar: "Unstar",
           connectPat: "Connect PAT",
           manageLists: "Manage lists",
           retryFailedLists: "Retry failed lists ({{count}})",
@@ -54,6 +55,8 @@ export const resources = {
             syncFailed: "Sync failed",
             retryFailed: "Retry failed",
             tokenValidationFailed: "Token validation failed",
+            unstarFailed: "Could not unstar",
+            unstarConfirm: "Unstar {{name}} on GitHub? It leaves this catalog.",
           },
           status: {
             completed: "Synced",
@@ -254,6 +257,7 @@ export const resources = {
         subtitle: "把 GitHub 收藏收进列表。",
         actions: {
           assignList: "分配列表",
+          unstar: "取消收藏",
           connectPat: "连接 PAT",
           manageLists: "管理列表",
           retryFailedLists: "重试失败列表（{{count}}）",
@@ -276,6 +280,8 @@ export const resources = {
             syncFailed: "同步失败",
             retryFailed: "重试失败",
             tokenValidationFailed: "Token 校验失败",
+            unstarFailed: "取消收藏失败",
+            unstarConfirm: "在 GitHub 上取消收藏 {{name}}？它会从本目录移除。",
           },
           status: {
             completed: "已同步",

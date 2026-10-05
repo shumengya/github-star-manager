@@ -20,6 +20,8 @@ type RepoCatalogProps = {
   onRecentOnly: (value: boolean) => void;
   onSearch: (value: string) => void;
   onAssign: (repo: { id: string; name: string }) => void;
+  onUnstar: (repo: { id: string; name: string }) => void;
+  unstarBusyId: string | null;
 };
 
 export function RepoCatalog({
@@ -37,6 +39,8 @@ export function RepoCatalog({
   onRecentOnly,
   onSearch,
   onAssign,
+  onUnstar,
+  unstarBusyId,
 }: RepoCatalogProps) {
   const { t } = useTranslation();
 
@@ -112,6 +116,8 @@ export function RepoCatalog({
               key={repo.id}
               repo={repo}
               onAssign={() => onAssign({ id: repo.id, name: repo.name })}
+              onUnstar={() => onUnstar({ id: repo.id, name: repo.name })}
+              unstarBusy={unstarBusyId === repo.id}
             />
           ))}
         </div>

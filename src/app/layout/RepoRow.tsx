@@ -6,9 +6,11 @@ import styles from "./RepoRow.module.css";
 type RepoRowProps = {
   repo: RepoPreview;
   onAssign: () => void;
+  onUnstar: () => void;
+  unstarBusy?: boolean;
 };
 
-export function RepoRow({ repo, onAssign }: RepoRowProps) {
+export function RepoRow({ repo, onAssign, onUnstar, unstarBusy }: RepoRowProps) {
   const { t } = useTranslation();
 
   return (
@@ -94,6 +96,9 @@ export function RepoRow({ repo, onAssign }: RepoRowProps) {
         ) : null}
         <button type="button" className={controls.button} onClick={onAssign}>
           {t("app.actions.assignList")}
+        </button>
+        <button type="button" className={controls.button} onClick={onUnstar} disabled={unstarBusy}>
+          {t("app.actions.unstar")}
         </button>
       </div>
     </article>

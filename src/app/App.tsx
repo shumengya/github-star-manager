@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { detectBrowserLanguage, resolveEffectiveLanguage } from "./i18n/language";
 import { isLastSyncStale, retryListMembership, syncFromGitHub } from "./core/githubSync";
+import { unstarRepoFromGitHub } from "./core/unstarRepo";
 import { db } from "./data/db";
 import { useLiveQuery } from "./data/useLiveQuery";
 import { ListRail } from "./layout/ListRail";
@@ -42,6 +43,8 @@ export default function App() {
   const [recentOnly, setRecentOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [unstarBusyId, setUnstarBusyId] = useState<string | null>(null);
+  const unstarLock = useRef(false);
   const syncLock = useRef(false);
   const autoStaleSyncStarted = useRef(false);
 
@@ -92,6 +95,30 @@ export default function App() {
     window.addEventListener("pointerdown", onInteract);
     return () => window.removeEventListener("pointerdown", onInteract);
   }, [runSync]);
+
+  const handleUnstar = useCallback(
+    async (repo: { id: string; name: string }) => {
+      const token = getPreferenceSnapshot().patToken.trim();
+      if (!token) {
+        setIsPatModalOpen(true);
+        return;
+      }
+      const ok = window.confirm(t("app.sync.detail.unstarConfirm", { name: repo.name }));
+      if (!ok) return;
+      if (unstarLock.current) return;
+      unstarLock.current = true;
+      setUnstarBusyId(repo.id);
+      try {
+        await unstarRepoFromGitHub({ token }, repo.id);
+      } catch (error) {
+        window.alert((error as Error).message || t("app.sync.detail.unstarFailed"));
+      } finally {
+        unstarLock.current = false;
+        setUnstarBusyId(null);
+      }
+    },
+    [t]
+  );
 
   const showPatRequiredPrompt =
     !preferences.patToken.trim() && !patIntroDismissed && !isPatModalOpen;
@@ -349,6 +376,10 @@ export default function App() {
           onRecentOnly={setRecentOnly}
           onSearch={setSearchQuery}
           onAssign={setAssignRepo}
+          onUnstar={(repo) => {
+            void handleUnstar(repo);
+          }}
+          unstarBusyId={unstarBusyId}
         />
       </main>
 
